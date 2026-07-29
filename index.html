@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Río Grande Guidance</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1f2630;
+    --line: #2d3542;
+    --text: #e6edf3;
+    --dim: #8b98a5;
+    --green: #3fb950;
+    --green-dark: #238636;
+    --amber: #d29922;
+    --red: #f85149;
+    --blue: #58a6ff;
+    --big: clamp(28px, 9vw, 54px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  }
+
+  /* ---------- Lightbar ---------- */
+  #lightbar { background: var(--panel); border-bottom: 1px solid var(--line); padding: 6px 10px 8px; flex: none; }
+  #leds { display: flex; justify-content: center; gap: 5px; margin-bottom: 4px; }
+  .led { width: 22px; height: 10px; border-radius: 5px; background: #21262d; transition: background .12s; }
+  .led.on-l { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .led.on-r { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .led.on-c { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  #xteRow { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: calc(var(--big) * 1.15); }
+  .steerArrow { font-size: calc(var(--big) * 0.8); font-weight: 800; color: var(--amber); opacity: 0; width: 1em; text-align: center; }
+  .steerArrow.show { opacity: 1; }
+  #xteVal { font-size: var(--big); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+  #xteVal.good { color: var(--green); }
+  #xteVal.warn { color: var(--amber); }
+  #xteVal.bad  { color: var(--red); }
+  #xteHint { text-align: center; color: var(--dim); font-size: 13px; font-weight: 600; min-height: 17px; }
+
+  /* ---------- Map ---------- */
+  #mapWrap { flex: 1; position: relative; min-height: 0; }
+  #map { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .chipCol { position: absolute; display: flex; flex-direction: column; gap: 8px; }
+  #chipsTL { top: 10px; left: 10px; }
+  #chipsTR { top: 10px; right: 10px; align-items: flex-end; }
+  .chip {
+    background: rgba(22,27,34,.88); border: 1px solid var(--line); border-radius: 10px;
+    padding: 6px 10px; font-size: 13px; font-weight: 700; color: var(--text);
+    display: flex; align-items: baseline; gap: 5px; backdrop-filter: blur(4px);
+  }
+  .chip small { color: var(--dim); font-weight: 600; font-size: 11px; }
+  .chip .v { font-variant-numeric: tabular-nums; font-size: 16px; }
+  .chip.alert { border-color: var(--red); color: var(--red); }
+  .mapBtn {
+    background: rgba(22,27,34,.88); border: 1px solid var(--line); border-radius: 12px;
+    color: var(--text); font-size: 20px; font-weight: 700; width: 46px; height: 46px;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+  }
+  .mapBtn:active { background: var(--panel2); }
+  #zoomCol { bottom: 12px; right: 10px; }
+  #simPad {
+    position: absolute; bottom: 12px; left: 10px; right: 66px;
+    display: none; justify-content: space-between; align-items: flex-end; pointer-events: none;
+  }
+  #simPad.show { display: flex; }
+  .simBtn {
+    pointer-events: auto; width: 84px; height: 84px; border-radius: 50%;
+    background: rgba(31,38,48,.85); border: 2px solid var(--line); color: var(--text);
+    font-size: 34px; font-weight: 800; backdrop-filter: blur(4px);
+  }
+  .simBtn:active { background: #2b3442; border-color: var(--blue); }
+  #simMid { pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .simSmall {
+    background: rgba(31,38,48,.85); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--text); font-size: 14px; font-weight: 700; padding: 8px 14px;
+  }
+  .simSmall.on { border-color: var(--green); color: var(--green); }
+
+  /* ---------- Bottom bar ---------- */
+  #bottomBar { flex: none; background: var(--panel); border-top: 1px solid var(--line); padding: 8px 10px calc(8px); display: flex; gap: 8px; }
+  .bigBtn {
+    flex: 1; border: 1px solid var(--line); border-radius: 14px; background: var(--panel2);
+    color: var(--text); font-size: 17px; font-weight: 800; padding: 14px 4px; min-height: 58px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .bigBtn small { font-size: 11px; font-weight: 600; color: var(--dim); }
+  .bigBtn:active { filter: brightness(1.25); }
+  .bigBtn.primary { background: var(--green-dark); border-color: var(--green-dark); }
+  .bigBtn.primary small { color: #c8e6c9; }
+  .bigBtn.armed { background: #7a4a00; border-color: var(--amber); }
+  .bigBtn.workOn { background: var(--green-dark); border-color: var(--green); box-shadow: 0 0 0 2px var(--green) inset; }
+  .bigBtn:disabled { opacity: .45; }
+
+  /* ---------- Overlays ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(2,6,12,.82); z-index: 50;
+    display: none; align-items: center; justify-content: center; padding: 18px;
+  }
+  .overlay.show { display: flex; }
+  .sheet {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto; padding: 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sheet h1 { font-size: 22px; margin-bottom: 2px; }
+  .sheet h2 { font-size: 15px; color: var(--dim); font-weight: 600; margin: 16px 0 8px; }
+  .sheet p { font-size: 14px; color: var(--dim); line-height: 1.5; margin-bottom: 8px; }
+  .opGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opBtn {
+    border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 12px; padding: 12px 8px; font-size: 15px; font-weight: 700; text-align: center;
+  }
+  .opBtn small { display: block; color: var(--dim); font-weight: 600; font-size: 11px; margin-top: 2px; }
+  .opBtn.sel { border-color: var(--green); color: var(--green); background: rgba(63,185,80,.08); }
+  .widthRow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .widthRow button { width: 54px; height: 54px; font-size: 26px; font-weight: 800; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
+  #widthVal { flex: 1; text-align: center; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  #widthVal small { font-size: 14px; color: var(--dim); font-weight: 600; }
+  .startRow { display: flex; gap: 8px; margin-top: 18px; }
+  .startBtn { flex: 1; border-radius: 14px; padding: 16px 6px; font-size: 16px; font-weight: 800; border: none; }
+  #btnStartGps { background: var(--green-dark); color: #fff; }
+  #btnStartDemo { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+  .startBtn small { display: block; font-weight: 600; font-size: 11px; opacity: .8; margin-top: 2px; }
+  .note { border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--dim); line-height: 1.45; margin-top: 14px; }
+  .note b { color: var(--text); }
+  .boot { margin-top: 8px; font-size: 12.5px; font-weight: 700; color: var(--amber); line-height: 1.4; }
+  .boot.ok { color: var(--green); }
+  .linkRow { margin-top: 14px; text-align: center; }
+  .linkRow button { background: none; border: none; color: var(--blue); font-size: 14px; font-weight: 700; padding: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 10px; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 600; }
+  td { color: var(--text); }
+  .closeX { position: sticky; top: 0; float: right; background: var(--panel2); border: 1px solid var(--line); color: var(--text); width: 36px; height: 36px; border-radius: 50%; font-size: 16px; font-weight: 800; }
+</style>
+</head>
+<body>
+
+<!-- ======= LIGHTBAR ======= -->
+<div id="lightbar">
+  <div id="leds"></div>
+  <div id="xteRow">
+    <div class="steerArrow" id="arrL">&#9664;</div>
+    <div id="xteVal">--</div>
+    <div class="steerArrow" id="arrR">&#9654;</div>
+  </div>
+  <div id="xteHint">Set your A&#8211;B line to begin</div>
+</div>
+
+<!-- ======= MAP ======= -->
+<div id="mapWrap">
+  <canvas id="map"></canvas>
+  <div class="chipCol" id="chipsTL">
+    <div class="chip"><span class="v" id="chipSpeed">0.0</span><small>km/h</small></div>
+    <div class="chip"><span class="v" id="chipArea">0.00</span><small>ha</small></div>
+    <div class="chip"><span class="v" id="chipPass">&#8211;</span><small>pass</small></div>
+  </div>
+  <div class="chipCol" id="chipsTR">
+    <div class="chip" id="chipGpsWrap"><span class="v" id="chipGps">&#8211;</span><small id="chipGpsLbl">GPS</small></div>
+    <div class="chip"><span class="v" id="chipWidth">12.0</span><small>m</small></div>
+  </div>
+  <div class="chipCol" id="zoomCol">
+    <button class="mapBtn" id="btnNorth" title="Orientation">&#8593;</button>
+    <button class="mapBtn" id="btnZoomIn">+</button>
+    <button class="mapBtn" id="btnZoomOut">&#8722;</button>
+    <button class="mapBtn" id="btnBeep">&#128276;</button>
+    <button class="mapBtn" id="btnGear">&#9881;</button>
+  </div>
+  <div id="simPad">
+    <button class="simBtn" id="simL">&#8678;</button>
+    <div id="simMid">
+      <button class="simSmall" id="simAuto">AUTO&#8209;STEER</button>
+      <button class="simSmall" id="simSpeed">8 km/h</button>
+    </div>
+    <button class="simBtn" id="simR">&#8680;</button>
+  </div>
+</div>
+
+<!-- ======= BOTTOM BAR ======= -->
+<div id="bottomBar">
+  <button class="bigBtn primary" id="btnAB"><span id="abLabel">SET A</span><small id="abSub">drive &amp; mark</small></button>
+  <button class="bigBtn" id="btnWork" disabled><span>WORK</span><small id="workSub">coverage off</small></button>
+  <button class="bigBtn" id="btnMore"><span>&#8942;</span><small>more</small></button>
+</div>
+
+<!-- ======= SETUP OVERLAY ======= -->
+<div class="overlay show" id="setupOverlay">
+  <div class="sheet">
+    <h1>R&iacute;o Grande Guidance</h1>
+    <p>Parallel-pass GPS guidance for the tractor. Pick the job, set the implement width, and go.</p>
+    <div class="boot" id="bootStat">&#9888; If this line doesn&#8217;t turn green, this viewer is only showing a picture of the app &#8212; its code isn&#8217;t running. Open the file through a web link in Safari instead (2-min setup, ask Claude).</div>
+    <h2>OPERATION</h2>
+    <div class="opGrid" id="opGrid"></div>
+    <h2>IMPLEMENT WIDTH</h2>
+    <div class="widthRow">
+      <button id="wMinus">&#8722;</button>
+      <div id="widthVal">12.0 <small>m</small></div>
+      <button id="wPlus">+</button>
+    </div>
+    <div class="startRow">
+      <button class="startBtn" id="btnStartGps">START WITH GPS<small>use this phone&#8217;s position</small></button>
+      <button class="startBtn" id="btnStartDemo">DEMO<small>simulator &#8211; try it now</small></button>
+    </div>
+    <div class="note" id="gpsNote"><b>Phone GPS is ~3&#8211;5 m accurate.</b> Good for spreading, spraying and tillage passes. For planting-grade (2&#8211;30 cm), pair an external RTK receiver later &#8212; the guidance logic here stays the same.</div>
+    <div class="linkRow"><button id="btnInfo">How to use &amp; accuracy guide</button></div>
+  </div>
+</div>
+
+<!-- ======= MORE OVERLAY ======= -->
+<div class="overlay" id="moreOverlay">
+  <div class="sheet">
+    <button class="closeX" data-close="moreOverlay">&#10005;</button>
+    <h1>Menu</h1>
+    <h2 style="clear:both">FIELD</h2>
+    <div class="opGrid">
+      <button class="opBtn" id="mNewAB">New A&#8211;B line</button>
+      <button class="opBtn" id="mClearCov">Clear coverage</button>
+      <button class="opBtn" id="mSetup">Job setup</button>
+      <button class="opBtn" id="mExit">Exit to start</button>
+    </div>
+    <h2>ABOUT</h2>
+    <p>Estancia R&iacute;o Grande field guidance &#8212; AB lines, lightbar steering aid, and coverage mapping. All data stays on this phone.</p>
+  </div>
+</div>
+
+<!-- ======= INFO OVERLAY ======= -->
+<div class="overlay" id="infoOverlay">
+  <div class="sheet">
+    <button class="closeX" data-close="infoOverlay">&#10005;</button>
+    <h1>How to use</h1>
+    <h2 style="clear:both">IN THE FIELD</h2>
+    <p>1. Mount the phone in the cab, plugged into power.<br>
+       2. Start a job, drive to your first pass, tap <b>SET A</b>, drive at least 30 m along it, tap <b>SET B</b>.<br>
+       3. Follow the lightbar: the arrow points the way to steer, the number is how far you are off the line.<br>
+       4. Tap <b>WORK</b> when the implement is engaged &#8212; it paints your coverage and totals hectares. Tap again on headland turns.</p>
+    <h2>ACCURACY &#8212; BE HONEST WITH YOURSELF</h2>
+    <table>
+      <tr><th>Source</th><th>Error</th><th>OK for</th></tr>
+      <tr><td>Phone GPS</td><td>3&#8211;5 m</td><td>spreading, spraying, disking</td></tr>
+      <tr><td>External RTK receiver</td><td>2&#8211;30 cm</td><td>planting, bedding</td></tr>
+      <tr><td>Autosteer kit</td><td>2.5 cm</td><td>everything, hands-free</td></tr>
+    </table>
+    <p>Overlap costs real money in seed, urea and diesel &#8212; but so does a gap in a urea pass. With phone GPS, set width slightly narrower than the implement to bias toward overlap.</p>
+    <h2>RUNNING WITH REAL GPS ON IPHONE</h2>
+    <p>Safari only allows GPS on pages served over HTTPS. Upload this single file to any free static host (tiiny.host, Netlify Drop, GitHub Pages), open the link in Safari, allow location, then <b>Share &#8594; Add to Home Screen</b> so it launches full-screen like a native app. It works offline after first load &#8212; and there is no signal needed in the field, GPS is satellite-only.</p>
+    <h2>TIPS</h2>
+    <p>Keep the phone screen on (Settings &#8594; Display &#8594; Auto-Lock &#8594; Never while working). The app also requests a screen wake lock automatically. Audio alert beeps when you drift past the tolerance &#8212; toggle with the bell.</p>
+  </div>
+</div>
+
+<script>
+"use strict";
+window.onerror = function (msg) {
+  try { var b = document.getElementById("bootStat"); if (b) { b.textContent = "App error: " + msg; b.className = "boot"; } } catch (e) {}
+};
+/* ================= Utilities ================= */
+const $ = id => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const hyp = (x, y) => Math.sqrt(x * x + y * y);
+const R2D = 180 / Math.PI, D2R = Math.PI / 180;
+
+/* Safe storage: falls back to memory where localStorage is unavailable (e.g. sandboxed preview) */
+const store = (() => {
+  let mem = {};
+  let ok = false;
+  try { const t = "__t" + 1; window.localStorage.setItem(t, "1"); window.localStorage.removeItem(t); ok = true; } catch (e) { ok = false; }
+  return {
+    get(k, d) { try { const v = ok ? window.localStorage.getItem(k) : mem[k]; return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { const s = JSON.stringify(v); if (ok) window.localStorage.setItem(k, s); else mem[k] = s; } catch (e) {} }
+  };
+})();
+
+/* ================= State ================= */
+const OPS = [
+  { id: "spread", name: "Spreading", w: 12.0, tol: 1.0, hint: "urea / fertilizer" },
+  { id: "spray",  name: "Spraying",  w: 18.0, tol: 0.75, hint: "boom passes" },
+  { id: "till",   name: "Tillage",   w: 3.5,  tol: 0.5,  hint: "disk / harrow" },
+  { id: "plant",  name: "Planting",  w: 6.0,  tol: 0.25, hint: "needs RTK really" },
+];
+
+const S = {
+  mode: null,              // 'gps' | 'demo'
+  op: store.get("op", "spread"),
+  width: store.get("width", 12.0),
+  beep: store.get("beep", true),
+  courseUp: true,
+  scale: 4,                // px per meter
+  origin: null,            // {lat, lon, coslat}
+  pos: null,               // {x, y} meters east/north of origin
+  heading: 0,              // radians, 0 = north, clockwise positive
+  speed: 0,                // m/s
+  acc: null,               // GPS accuracy meters
+  ab: { a: null, b: null },
+  abStage: 0,              // 0 none, 1 A set, 2 complete
+  work: false,
+  cov: [],                 // coverage segments {x1,y1,x2,y2}
+  covArea: 0,              // m^2
+  lastCov: null,
+  guid: null,              // latest guidance result
+  watchId: null,
+  wakeLock: null,
+  sim: { on: false, auto: false, steer: 0, speedIdx: 1, speeds: [4, 8, 12], lockN: null },
+  lastBeep: 0,
+  audio: null,
+};
+
+function opDef() { return OPS.find(o => o.id === S.op) || OPS[0]; }
+
+/* ================= Geometry ================= */
+function llToXY(lat, lon) {
+  const o = S.origin;
+  return { x: (lon - o.lon) * D2R * 6371000 * o.coslat, y: (lat - o.lat) * D2R * 6371000 };
+}
+function headingVec() { return { x: Math.sin(S.heading), y: Math.cos(S.heading) }; }
+
+function computeGuidance() {
+  if (S.abStage < 2 || !S.pos) return null;
+  const { a, b } = S.ab;
+  let ux = b.x - a.x, uy = b.y - a.y;
+  const L = hyp(ux, uy); if (L < 1) return null;
+  ux /= L; uy /= L;
+  const dx = S.pos.x - a.x, dy = S.pos.y - a.y;
+  const z = ux * dy - uy * dx;                 // signed offset toward left-normal of AB
+  const w = S.width;
+  const n = Math.round(z / w);                 // pass index
+  const lat = n * w - z;                       // toward-target displacement along left-normal (signed)
+  // world vector from tractor to target line:
+  const lnx = -uy, lny = ux;                   // left normal
+  const tx = lat * lnx, ty = lat * lny;
+  const hv = headingVec();
+  const rvx = hv.y, rvy = -hv.x;               // tractor's right side
+  const side = tx * rvx + ty * rvy;            // >0: target to the right
+  const xte = Math.abs(lat);
+  return { n, xte, side, ux, uy, lnx, lny, a, w };
+}
+
+/* ================= Lightbar ================= */
+const LED_N = 13;
+const ledsEl = $("leds");
+for (let i = 0; i < LED_N; i++) { const d = document.createElement("div"); d.className = "led"; ledsEl.appendChild(d); }
+const ledEls = [...ledsEl.children];
+
+function fmtDist(m) {
+  if (m < 0.995) return Math.round(m * 100) + " cm";
+  if (m < 99.5) return m.toFixed(1) + " m";
+  return Math.round(m) + " m";
+}
+
+function updateLightbar() {
+  const g = S.guid;
+  const xv = $("xteVal"), hint = $("xteHint"), aL = $("arrL"), aR = $("arrR");
+  if (!g) {
+    xv.textContent = "--"; xv.className = "";
+    aL.classList.remove("show"); aR.classList.remove("show");
+    ledEls.forEach(l => l.className = "led");
+    hint.textContent = S.abStage === 1 ? "Drive along the pass, then tap SET B" : "Set your A–B line to begin";
+    return;
+  }
+  const tol = opDef().tol;
+  const xte = g.xte;
+  xv.textContent = fmtDist(xte);
+  xv.className = xte <= tol ? "good" : (xte <= tol * 3 ? "warn" : "bad");
+  const right = g.side > 0;
+  aL.classList.toggle("show", xte > tol && !right);
+  aR.classList.toggle("show", xte > tol && right);
+  hint.textContent = xte <= tol ? "ON LINE — pass " + passLabel(g.n) : ("STEER " + (right ? "RIGHT" : "LEFT") + " — pass " + passLabel(g.n));
+  // LEDs: center green when on line; off-line lights LEDs on the side to steer toward
+  const c = (LED_N - 1) / 2;
+  const mag = clamp(Math.ceil((xte - tol) / Math.max(tol, 0.15)), 0, c);
+  ledEls.forEach((l, i) => {
+    l.className = "led";
+    if (xte <= tol) { if (Math.abs(i - c) <= 1) l.classList.add("on-c"); }
+    else if (right && i > c && i <= c + mag) l.classList.add("on-r");
+    else if (!right && i < c && i >= c - mag) l.classList.add("on-l");
+  });
+  // beep on drift
+  if (S.beep && xte > tol * 3) {
+    const now = performance.now();
+    if (now - S.lastBeep > 1200) { S.lastBeep = now; beep(); }
+  }
+}
+function passLabel(n) { return n === 0 ? "AB" : (n > 0 ? "L" + n : "R" + (-n)); }
+
+function beep() {
+  try {
+    if (!S.audio) return;
+    const ctx = S.audio, o = ctx.createOscillator(), gn = ctx.createGain();
+    o.frequency.value = 880; o.type = "square";
+    gn.gain.setValueAtTime(0.08, ctx.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+    o.connect(gn); gn.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.2);
+  } catch (e) {}
+}
+function initAudio() {
+  if (S.audio) return;
+  try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) S.audio = new AC(); } catch (e) {}
+}
+
+/* ================= Coverage ================= */
+function updateCoverage() {
+  if (!S.work || !S.pos) { S.lastCov = S.pos ? { ...S.pos } : null; return; }
+  if (!S.lastCov) { S.lastCov = { ...S.pos }; return; }
+  const d = hyp(S.pos.x - S.lastCov.x, S.pos.y - S.lastCov.y);
+  if (d >= 0.6 && d < 50) {
+    S.cov.push({ x1: S.lastCov.x, y1: S.lastCov.y, x2: S.pos.x, y2: S.pos.y });
+    S.covArea += d * S.width;
+    if (S.cov.length > 250000) S.cov.splice(0, 50000);
+    S.lastCov = { ...S.pos };
+  } else if (d >= 50) {
+    S.lastCov = { ...S.pos }; // GPS jump — don't paint across it
+  }
+}
+
+/* ================= Canvas ================= */
+const canvas = $("map"), ctx = canvas.getContext("2d");
+let CW = 0, CH = 0, DPR = 1;
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  CW = r.width; CH = r.height;
+  canvas.width = Math.round(CW * DPR); canvas.height = Math.round(CH * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener("resize", () => { resize(); render(); });
+
+function basis() {
+  const hv = headingVec();
+  const up = S.courseUp ? hv : { x: 0, y: 1 };
+  return { up, right: { x: up.y, y: -up.x }, cx: CW / 2, cy: CH * 0.62 };
+}
+function w2s(px, py, B) {
+  const qx = px - S.pos.x, qy = py - S.pos.y;
+  return {
+    x: B.cx + (qx * B.right.x + qy * B.right.y) * S.scale,
+    y: B.cy - (qx * B.up.x + qy * B.up.y) * S.scale
+  };
+}
+
+function render() {
+  ctx.clearRect(0, 0, CW, CH);
+  ctx.fillStyle = "#0d1117"; ctx.fillRect(0, 0, CW, CH);
+  if (!S.pos) { drawIdle(); return; }
+  const B = basis();
+  drawGrid(B);
+  drawCoverage(B);
+  drawGuidanceLines(B);
+  drawABPoints(B);
+  drawTractor(B);
+  drawNorth(B);
+}
+
+function drawIdle() {
+  ctx.fillStyle = "#8b98a5"; ctx.font = "600 15px -apple-system, sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("Waiting for position…", CW / 2, CH / 2);
+}
+
+function viewRadius() { return hyp(CW, CH) / 2 / S.scale + 10; }
+
+function drawGrid(B) {
+  const step = S.scale > 6 ? 10 : (S.scale > 1.5 ? 50 : 100);
+  const r = viewRadius();
+  const x0 = Math.floor((S.pos.x - r) / step) * step, x1 = S.pos.x + r;
+  const y0 = Math.floor((S.pos.y - r) / step) * step, y1 = S.pos.y + r;
+  ctx.strokeStyle = "rgba(139,152,165,0.10)"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x += step) { const p1 = w2s(x, y0, B), p2 = w2s(x, y1, B); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
+  for (let y = y0; y <= y1; y += step) { const p1 = w2s(x0, y, B), p2 = w2s(x1, y, B); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
+  ctx.stroke();
+}
+
+function drawCoverage(B) {
+  if (!S.cov.length) return;
+  const r = viewRadius();
+  ctx.strokeStyle = "rgba(35,134,54,0.55)";
+  ctx.lineWidth = Math.max(1.5, S.width * S.scale);
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath();
+  for (let i = 0; i < S.cov.length; i++) {
+    const s = S.cov[i];
+    if (Math.abs(s.x1 - S.pos.x) > r + S.width && Math.abs(s.y1 - S.pos.y) > r + S.width) continue;
+    const p1 = w2s(s.x1, s.y1, B), p2 = w2s(s.x2, s.y2, B);
+    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+  }
+  ctx.stroke();
+}
+
+function drawGuidanceLines(B) {
+  const g = S.guid;
+  if (S.abStage < 2) return;
+  const { a, b } = S.ab;
+  let ux = b.x - a.x, uy = b.y - a.y; const L = hyp(ux, uy); if (L < 1) return;
+  ux /= L; uy /= L;
+  const lnx = -uy, lny = ux, w = S.width;
+  const r = viewRadius();
+  // current signed offset of tractor from AB
+  const z = ux * (S.pos.y - a.y) - uy * (S.pos.x - a.x);
+  const nNow = Math.round(z / w);
+  const range = Math.ceil(r / w) + 1;
+  const t0 = ux * (S.pos.x - a.x) + uy * (S.pos.y - a.y); // along-line coordinate of tractor
+  for (let n = nNow - range; n <= nNow + range; n++) {
+    const cx0 = a.x + lnx * n * w, cy0 = a.y + lny * n * w;
+    const p1 = w2s(cx0 + ux * (t0 - r * 1.5), cy0 + uy * (t0 - r * 1.5), B);
+    const p2 = w2s(cx0 + ux * (t0 + r * 1.5), cy0 + uy * (t0 + r * 1.5), B);
+    const isTarget = g && n === g.n;
+    const isAB = n === 0;
+    ctx.strokeStyle = isTarget ? "#d29922" : (isAB ? "rgba(88,166,255,0.8)" : "rgba(139,152,165,0.30)");
+    ctx.lineWidth = isTarget ? 3 : (isAB ? 2 : 1.25);
+    if (isAB && !isTarget) ctx.setLineDash([]); else if (!isTarget && !isAB) ctx.setLineDash([6, 8]); else ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawABPoints(B) {
+  const pts = [];
+  if (S.ab.a) pts.push({ p: S.ab.a, l: "A" });
+  if (S.ab.b) pts.push({ p: S.ab.b, l: "B" });
+  for (const { p, l } of pts) {
+    const s = w2s(p.x, p.y, B);
+    ctx.fillStyle = "#58a6ff";
+    ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0d1117"; ctx.font = "800 11px -apple-system, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(l, s.x, s.y + 0.5);
+  }
+}
+
+function drawTractor(B) {
+  const hv = headingVec();
+  const rv = { x: hv.y, y: -hv.x };
+  const P = S.pos, len = 3.2, wid = 1.5; // meters
+  const nose = w2s(P.x + hv.x * len, P.y + hv.y * len, B);
+  const bl = w2s(P.x - hv.x * len * 0.6 + rv.x * -wid, P.y - hv.y * len * 0.6 + rv.y * -wid, B);
+  const br = w2s(P.x - hv.x * len * 0.6 + rv.x * wid, P.y - hv.y * len * 0.6 + rv.y * wid, B);
+  // implement bar
+  const half = S.width / 2;
+  const i1 = w2s(P.x + rv.x * -half, P.y + rv.y * -half, B);
+  const i2 = w2s(P.x + rv.x * half, P.y + rv.y * half, B);
+  ctx.strokeStyle = S.work ? "#3fb950" : "rgba(139,152,165,0.7)";
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(i1.x, i1.y); ctx.lineTo(i2.x, i2.y); ctx.stroke();
+  ctx.fillStyle = "#f0f6fc";
+  ctx.strokeStyle = "#0d1117"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(nose.x, nose.y); ctx.lineTo(bl.x, bl.y); ctx.lineTo(br.x, br.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+
+function drawNorth(B) {
+  const x = CW - 30, y = 76;
+  const a = S.courseUp ? -S.heading : 0;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = "#f85149";
+  ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(5, 4); ctx.lineTo(-5, 4); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = "#8b98a5"; ctx.font = "700 10px -apple-system, sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("N", x, y + 16);
+}
+
+/* ================= HUD ================= */
+function updateHud() {
+  $("chipSpeed").textContent = (S.speed * 3.6).toFixed(1);
+  $("chipArea").textContent = (S.covArea / 10000).toFixed(2);
+  $("chipPass").textContent = S.guid ? passLabel(S.guid.n) : "–";
+  $("chipWidth").textContent = S.width.toFixed(1);
+  const gw = $("chipGpsWrap"), gv = $("chipGps"), gl = $("chipGpsLbl");
+  if (S.mode === "demo") { gv.textContent = "SIM"; gl.textContent = "demo"; gw.classList.remove("alert"); }
+  else if (S.acc == null) { gv.textContent = "–"; gl.textContent = "GPS"; gw.classList.remove("alert"); }
+  else { gv.textContent = "±" + Math.round(S.acc) + "m"; gl.textContent = "GPS"; gw.classList.toggle("alert", S.acc > 10); }
+}
+
+/* ================= Main update ================= */
+function onPosition(x, y, headingRad, speedMs, acc) {
+  const prev = S.pos;
+  S.pos = { x, y };
+  if (headingRad != null) S.heading = headingRad;
+  else if (prev) {
+    const dx = x - prev.x, dy = y - prev.y;
+    if (hyp(dx, dy) > 0.8) S.heading = Math.atan2(dx, dy);
+  }
+  if (speedMs != null) S.speed = speedMs;
+  else if (prev) S.speed = S.speed * 0.6 + hyp(x - prev.x, y - prev.y) * 0.4; // rough, assumes ~1Hz
+  S.acc = acc;
+  S.guid = computeGuidance();
+  updateCoverage();
+  updateLightbar();
+  updateHud();
+  render();
+}
+
+/* ================= GPS mode ================= */
+function startGps() {
+  if (!("geolocation" in navigator)) { alert("No GPS available in this browser."); return; }
+  if (window.isSecureContext === false) {
+    alert("GPS needs HTTPS. Host this file on any free static site (tiiny.host, Netlify Drop) and open that link in Safari. Starting DEMO instead so you can explore.");
+    startDemo(); return;
+  }
+  S.mode = "gps";
+  closeSetup();
+  requestWake();
+  S.watchId = navigator.geolocation.watchPosition(p => {
+    const c = p.coords;
+    if (!S.origin) S.origin = { lat: c.latitude, lon: c.longitude, coslat: Math.cos(c.latitude * D2R) };
+    const { x, y } = llToXY(c.latitude, c.longitude);
+    let h = null;
+    if (c.heading != null && !isNaN(c.heading) && (c.speed == null || c.speed > 0.4)) h = c.heading * D2R;
+    onPosition(x, y, h, c.speed != null && !isNaN(c.speed) ? c.speed : null, c.accuracy);
+  }, err => {
+    $("xteHint").textContent = "GPS error: " + (err && err.message ? err.message : "no fix") + " — check location permission";
+  }, { enableHighAccuracy: true, maximumAge: 500, timeout: 15000 });
+}
+
+/* ================= Demo mode ================= */
+let simTimer = null;
+function startDemo() {
+  S.mode = "demo";
+  S.origin = { lat: -17.23, lon: -62.9, coslat: Math.cos(-17.23 * D2R) };
+  S.pos = { x: 0, y: 0 }; S.heading = 0.35; S.speed = 0;
+  S.sim.on = true;
+  closeSetup();
+  $("simPad").classList.add("show");
+  requestWake();
+  if (simTimer) clearInterval(simTimer);
+  let lx = 0, ly = 0, lh = 0.35;
+  simTimer = setInterval(() => {
+    const dt = 0.1;
+    const spd = S.sim.speeds[S.sim.speedIdx] / 3.6;
+    // steering
+    let rate = S.sim.steer * 0.55; // rad/s manual
+    if (S.sim.auto && S.guid && S.sim.steer === 0) {
+      const g = S.guid;
+      if (S.sim.lockN == null) S.sim.lockN = g.n;      // lock target pass while engaged
+      let du = { x: g.ux, y: g.uy };
+      const hv = headingVec();
+      if (du.x * hv.x + du.y * hv.y < 0) du = { x: -du.x, y: -du.y };
+      // signed lateral offset to the LOCKED line, + = target to tractor's right
+      const zNow = g.ux * (ly - g.a.y) - g.uy * (lx - g.a.x);
+      const latAmt = S.sim.lockN * g.w - zNow;         // toward left-normal
+      const rvx = hv.y, rvy = -hv.x;
+      const latRight = latAmt * (g.lnx * rvx + g.lny * rvy);
+      const look = Math.max(6, spd * 3);
+      const approach = clamp(Math.atan2(latRight, look), -1.05, 1.05); // cap ~60°
+      const desired = Math.atan2(du.x, du.y) + approach;
+      let dh = desired - lh;
+      while (dh > Math.PI) dh -= 2 * Math.PI;
+      while (dh < -Math.PI) dh += 2 * Math.PI;
+      rate = clamp(dh * 2.0, -0.6, 0.6);
+    } else if (S.sim.steer !== 0) {
+      S.sim.lockN = null;                              // manual nudge re-targets nearest pass
+    }
+    lh += rate * dt;
+    lx += Math.sin(lh) * spd * dt;
+    ly += Math.cos(lh) * spd * dt;
+    onPosition(lx, ly, lh, spd, null);
+  }, 100);
+}
+
+/* ================= Wake lock ================= */
+async function requestWake() {
+  try {
+    if ("wakeLock" in navigator) {
+      S.wakeLock = await navigator.wakeLock.request("screen");
+      document.addEventListener("visibilitychange", async () => {
+        if (document.visibilityState === "visible" && S.wakeLock) {
+          try { S.wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+        }
+      });
+    }
+  } catch (e) {}
+}
+
+/* ================= UI wiring ================= */
+function closeSetup() { $("setupOverlay").classList.remove("show"); }
+
+function buildOpGrid() {
+  const g = $("opGrid"); g.innerHTML = "";
+  for (const o of OPS) {
+    const b = document.createElement("button");
+    b.className = "opBtn" + (S.op === o.id ? " sel" : "");
+    b.innerHTML = o.name + "<small>" + o.hint + "</small>";
+    b.onclick = () => { S.op = o.id; S.width = o.w; store.set("op", S.op); store.set("width", S.width); buildOpGrid(); updateWidthUI(); };
+    g.appendChild(b);
+  }
+}
+function updateWidthUI() {
+  $("widthVal").innerHTML = S.width.toFixed(1) + ' <small>m</small>';
+  $("chipWidth").textContent = S.width.toFixed(1);
+}
+$("wMinus").onclick = () => { S.width = clamp(Math.round((S.width - 0.5) * 2) / 2, 1, 48); store.set("width", S.width); updateWidthUI(); };
+$("wPlus").onclick = () => { S.width = clamp(Math.round((S.width + 0.5) * 2) / 2, 1, 48); store.set("width", S.width); updateWidthUI(); };
+
+$("btnStartGps").onclick = () => { initAudio(); startGps(); };
+$("btnStartDemo").onclick = () => { initAudio(); startDemo(); };
+$("btnInfo").onclick = () => $("infoOverlay").classList.add("show");
+
+$("btnAB").onclick = () => {
+  if (!S.pos) return;
+  if (S.abStage === 0) {
+    S.ab.a = { ...S.pos }; S.abStage = 1;
+    $("abLabel").textContent = "SET B"; $("abSub").textContent = "drive the pass first";
+  } else if (S.abStage === 1) {
+    if (hyp(S.pos.x - S.ab.a.x, S.pos.y - S.ab.a.y) < 10) { $("abSub").textContent = "too close — keep driving"; return; }
+    S.ab.b = { ...S.pos }; S.abStage = 2;
+    $("abLabel").textContent = "NEW AB"; $("abSub").textContent = "line set ✓";
+    $("btnWork").disabled = false;
+  } else {
+    S.abStage = 0; S.ab.a = null; S.ab.b = null; S.guid = null;
+    $("abLabel").textContent = "SET A"; $("abSub").textContent = "drive & mark";
+  }
+  S.guid = computeGuidance(); updateLightbar(); render();
+};
+
+$("btnWork").onclick = () => {
+  S.work = !S.work;
+  S.lastCov = S.pos ? { ...S.pos } : null;
+  $("btnWork").classList.toggle("workOn", S.work);
+  $("workSub").textContent = S.work ? "painting ●" : "coverage off";
+  render();
+};
+
+$("btnMore").onclick = () => $("moreOverlay").classList.add("show");
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $(b.dataset.close).classList.remove("show"));
+$("mNewAB").onclick = () => { $("moreOverlay").classList.remove("show"); S.abStage = 2; $("btnAB").click(); };
+$("mClearCov").onclick = () => { S.cov = []; S.covArea = 0; S.lastCov = S.pos ? { ...S.pos } : null; $("moreOverlay").classList.remove("show"); updateHud(); render(); };
+$("mSetup").onclick = () => { $("moreOverlay").classList.remove("show"); $("setupOverlay").classList.add("show"); };
+$("mExit").onclick = () => { window.location.reload(); };
+
+$("btnZoomIn").onclick = () => { S.scale = clamp(S.scale * 1.5, 0.4, 24); render(); };
+$("btnZoomOut").onclick = () => { S.scale = clamp(S.scale / 1.5, 0.4, 24); render(); };
+$("btnNorth").onclick = () => { S.courseUp = !S.courseUp; $("btnNorth").innerHTML = S.courseUp ? "&#8593;" : "N"; render(); };
+$("btnBeep").onclick = () => { S.beep = !S.beep; store.set("beep", S.beep); $("btnBeep").style.opacity = S.beep ? 1 : 0.4; initAudio(); };
+$("btnGear").onclick = () => $("setupOverlay").classList.add("show");
+
+/* sim controls */
+function bindHold(el, on, off) {
+  const dn = e => { e.preventDefault(); on(); };
+  const up = e => { e.preventDefault(); off(); };
+  el.addEventListener("touchstart", dn, { passive: false });
+  el.addEventListener("touchend", up); el.addEventListener("touchcancel", up);
+  el.addEventListener("mousedown", dn); el.addEventListener("mouseup", up); el.addEventListener("mouseleave", off);
+}
+bindHold($("simL"), () => S.sim.steer = -1, () => S.sim.steer = 0);
+bindHold($("simR"), () => S.sim.steer = 1, () => S.sim.steer = 0);
+$("simAuto").onclick = () => {
+  S.sim.auto = !S.sim.auto;
+  S.sim.lockN = null;
+  $("simAuto").classList.toggle("on", S.sim.auto);
+  if (S.sim.auto && S.abStage < 2) { S.sim.auto = false; $("simAuto").classList.remove("on"); $("xteHint").textContent = "Set A–B line first, then AUTO"; }
+};
+$("simSpeed").onclick = () => {
+  S.sim.speedIdx = (S.sim.speedIdx + 1) % S.sim.speeds.length;
+  $("simSpeed").textContent = S.sim.speeds[S.sim.speedIdx] + " km/h";
+};
+
+/* ================= Boot ================= */
+window.__test = { S, computeGuidance, onPosition, startDemo, passLabel };
+buildOpGrid();
+updateWidthUI();
+$("btnBeep").style.opacity = S.beep ? 1 : 0.4;
+resize();
+render();
+$("bootStat").textContent = "Ready ✓ — buttons are live. Tap DEMO to try it.";
+$("bootStat").classList.add("ok");
+</script>
+</body>
+</html>
