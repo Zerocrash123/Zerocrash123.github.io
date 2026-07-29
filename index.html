@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Río Grande Guidance</title>
 <style>
   :root {
@@ -35,8 +38,7 @@
   #lightbar { background: var(--panel); border-bottom: 1px solid var(--line); padding: 6px 10px 8px; flex: none; }
   #leds { display: flex; justify-content: center; gap: 5px; margin-bottom: 4px; }
   .led { width: 22px; height: 10px; border-radius: 5px; background: #21262d; transition: background .12s; }
-  .led.on-l { background: var(--red); box-shadow: 0 0 8px var(--red); }
-  .led.on-r { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .led.on-l, .led.on-r { background: var(--red); box-shadow: 0 0 8px var(--red); }
   .led.on-c { background: var(--green); box-shadow: 0 0 10px var(--green); }
   #xteRow { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: calc(var(--big) * 1.15); }
   .steerArrow { font-size: calc(var(--big) * 0.8); font-weight: 800; color: var(--amber); opacity: 0; width: 1em; text-align: center; }
@@ -46,6 +48,7 @@
   #xteVal.warn { color: var(--amber); }
   #xteVal.bad  { color: var(--red); }
   #xteHint { text-align: center; color: var(--dim); font-size: 13px; font-weight: 600; min-height: 17px; }
+  #xteHint.alarm { color: var(--amber); }
 
   /* ---------- Map ---------- */
   #mapWrap { flex: 1; position: relative; min-height: 0; }
@@ -61,6 +64,8 @@
   .chip small { color: var(--dim); font-weight: 600; font-size: 11px; }
   .chip .v { font-variant-numeric: tabular-nums; font-size: 16px; }
   .chip.alert { border-color: var(--red); color: var(--red); }
+  .chip.warnc { border-color: var(--amber); color: var(--amber); }
+  .hide { display: none !important; }
   .mapBtn {
     background: rgba(22,27,34,.88); border: 1px solid var(--line); border-radius: 12px;
     color: var(--text); font-size: 20px; font-weight: 700; width: 46px; height: 46px;
@@ -87,7 +92,7 @@
   .simSmall.on { border-color: var(--green); color: var(--green); }
 
   /* ---------- Bottom bar ---------- */
-  #bottomBar { flex: none; background: var(--panel); border-top: 1px solid var(--line); padding: 8px 10px calc(8px); display: flex; gap: 8px; }
+  #bottomBar { flex: none; background: var(--panel); border-top: 1px solid var(--line); padding: 8px 10px; display: flex; gap: 8px; }
   .bigBtn {
     flex: 1; border: 1px solid var(--line); border-radius: 14px; background: var(--panel2);
     color: var(--text); font-size: 17px; font-weight: 800; padding: 14px 4px; min-height: 58px;
@@ -123,9 +128,9 @@
   .opBtn small { display: block; color: var(--dim); font-weight: 600; font-size: 11px; margin-top: 2px; }
   .opBtn.sel { border-color: var(--green); color: var(--green); background: rgba(63,185,80,.08); }
   .widthRow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-  .widthRow button { width: 54px; height: 54px; font-size: 26px; font-weight: 800; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
-  #widthVal { flex: 1; text-align: center; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  #widthVal small { font-size: 14px; color: var(--dim); font-weight: 600; }
+  .widthRow button { width: 54px; height: 54px; font-size: 26px; font-weight: 800; border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); flex: none; }
+  .widthRow .wv { flex: 1; text-align: center; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .widthRow .wv small { font-size: 14px; color: var(--dim); font-weight: 600; }
   .startRow { display: flex; gap: 8px; margin-top: 18px; }
   .startBtn { flex: 1; border-radius: 14px; padding: 16px 6px; font-size: 16px; font-weight: 800; border: none; }
   #btnStartGps { background: var(--green-dark); color: #fff; }
@@ -137,11 +142,23 @@
   .boot.ok { color: var(--green); }
   .linkRow { margin-top: 14px; text-align: center; }
   .linkRow button { background: none; border: none; color: var(--blue); font-size: 14px; font-weight: 700; padding: 8px; }
+  .langRow { display: flex; gap: 8px; }
+  .langRow button { flex: 1; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 10px; padding: 10px; font-size: 14px; font-weight: 800; }
+  .langRow button.sel { border-color: var(--green); color: var(--green); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 10px; }
   th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
   th { color: var(--dim); font-weight: 600; }
   td { color: var(--text); }
-  .closeX { position: sticky; top: 0; float: right; background: var(--panel2); border: 1px solid var(--line); color: var(--text); width: 36px; height: 36px; border-radius: 50%; font-size: 16px; font-weight: 800; }
+  .closeX { position: sticky; top: 0; float: right; background: var(--panel2); border: 1px solid var(--line); color: var(--text); width: 36px; height: 36px; border-radius: 50%; font-size: 16px; font-weight: 800; z-index: 2; }
+  .sumGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .sumCell { border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+  .sumCell .sv { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .sumCell .sl { font-size: 11px; color: var(--dim); font-weight: 600; margin-top: 2px; }
+  .fieldRow { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+  .fieldRow .fLoad { flex: 1; text-align: left; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 12px; padding: 10px 12px; font-size: 15px; font-weight: 700; }
+  .fieldRow .fLoad small { display: block; color: var(--dim); font-weight: 600; font-size: 11px; margin-top: 2px; }
+  .fieldRow .fDel { width: 46px; border: 1px solid var(--line); background: var(--panel2); color: var(--red); border-radius: 12px; font-size: 16px; font-weight: 800; }
+  .ver { text-align: center; color: var(--dim); font-size: 11px; margin-top: 12px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -163,11 +180,13 @@
   <div class="chipCol" id="chipsTL">
     <div class="chip"><span class="v" id="chipSpeed">0.0</span><small>km/h</small></div>
     <div class="chip"><span class="v" id="chipArea">0.00</span><small>ha</small></div>
-    <div class="chip"><span class="v" id="chipPass">&#8211;</span><small>pass</small></div>
+    <div class="chip"><span class="v" id="chipPass">&#8211;</span><small data-i18n="pass">pass</small></div>
+    <div class="chip warnc hide" id="chipHead"><span class="v" id="chipHeadV">&#8211;</span><small id="chipHeadL">HEADLAND</small></div>
   </div>
   <div class="chipCol" id="chipsTR">
     <div class="chip" id="chipGpsWrap"><span class="v" id="chipGps">&#8211;</span><small id="chipGpsLbl">GPS</small></div>
     <div class="chip"><span class="v" id="chipWidth">12.0</span><small>m</small></div>
+    <div class="chip hide" id="chipField"><span class="v" id="chipFieldV">&#8211;</span><small id="chipFieldL">lote</small></div>
   </div>
   <div class="chipCol" id="zoomCol">
     <button class="mapBtn" id="btnNorth" title="Orientation">&#8593;</button>
@@ -189,30 +208,41 @@
 <!-- ======= BOTTOM BAR ======= -->
 <div id="bottomBar">
   <button class="bigBtn primary" id="btnAB"><span id="abLabel">SET A</span><small id="abSub">drive &amp; mark</small></button>
-  <button class="bigBtn" id="btnWork" disabled><span>WORK</span><small id="workSub">coverage off</small></button>
-  <button class="bigBtn" id="btnMore"><span>&#8942;</span><small>more</small></button>
+  <button class="bigBtn" id="btnWork" disabled><span id="workLabel">WORK</span><small id="workSub">coverage off</small></button>
+  <button class="bigBtn" id="btnMore"><span>&#8942;</span><small data-i18n="more">more</small></button>
 </div>
 
 <!-- ======= SETUP OVERLAY ======= -->
 <div class="overlay show" id="setupOverlay">
   <div class="sheet">
     <h1>R&iacute;o Grande Guidance</h1>
-    <p>Parallel-pass GPS guidance for the tractor. Pick the job, set the implement width, and go.</p>
-    <div class="boot" id="bootStat">&#9888; If this line doesn&#8217;t turn green, this viewer is only showing a picture of the app &#8212; its code isn&#8217;t running. Open the file through a web link in Safari instead (2-min setup, ask Claude).</div>
-    <h2>OPERATION</h2>
+    <p data-i18n="tagline">Parallel-pass GPS guidance for the tractor. Pick the job, set the implement width, and go.</p>
+    <div class="boot" id="bootStat">&#9888; If this line doesn&#8217;t turn green, this viewer is only showing a picture of the app &#8212; its code isn&#8217;t running. Open https://zerocrash123.github.io in Safari instead.</div>
+    <h2 data-i18n="hLang">LANGUAGE / IDIOMA</h2>
+    <div class="langRow"><button id="langEn">English</button><button id="langEs">Espa&ntilde;ol</button></div>
+    <h2 data-i18n="hOp">OPERATION</h2>
     <div class="opGrid" id="opGrid"></div>
-    <h2>IMPLEMENT WIDTH</h2>
+    <h2 data-i18n="hWidth">IMPLEMENT WIDTH</h2>
     <div class="widthRow">
       <button id="wMinus">&#8722;</button>
-      <div id="widthVal">12.0 <small>m</small></div>
+      <div class="wv" id="widthVal">12.0 <small>m</small></div>
       <button id="wPlus">+</button>
     </div>
-    <div class="startRow">
-      <button class="startBtn" id="btnStartGps">START WITH GPS<small>use this phone&#8217;s position</small></button>
-      <button class="startBtn" id="btnStartDemo">DEMO<small>simulator &#8211; try it now</small></button>
+    <div id="rateBlock">
+      <h2 data-i18n="hRate">APPLICATION RATE (optional)</h2>
+      <div class="widthRow">
+        <button id="rMinus">&#8722;</button>
+        <div class="wv" id="rateVal">0 <small id="rateUnit">L/ha</small></div>
+        <button id="rPlus">+</button>
+      </div>
     </div>
-    <div class="note" id="gpsNote"><b>Phone GPS is ~3&#8211;5 m accurate.</b> Good for spreading, spraying and tillage passes. For planting-grade (2&#8211;30 cm), pair an external RTK receiver later &#8212; the guidance logic here stays the same.</div>
-    <div class="linkRow"><button id="btnInfo">How to use &amp; accuracy guide</button></div>
+    <div class="startRow">
+      <button class="startBtn" id="btnStartGps" data-i18n="btnGps">START WITH GPS<small>use this phone&#8217;s position</small></button>
+      <button class="startBtn" id="btnStartDemo" data-i18n="btnDemo">DEMO<small>simulator &#8211; try it now</small></button>
+    </div>
+    <div class="note" id="gpsNote" data-i18n="gpsNote"><b>Phone GPS is ~3&#8211;5 m accurate.</b> Good for spreading, spraying and tillage passes. For planting-grade (2&#8211;30 cm), pair an external RTK receiver later &#8212; the guidance logic here stays the same.</div>
+    <div class="linkRow"><button id="btnInfo" data-i18n="btnInfoLbl">How to use &amp; accuracy guide</button></div>
+    <div class="ver">v2.0 &middot; <span id="verNote">offline-ready</span></div>
   </div>
 </div>
 
@@ -220,16 +250,57 @@
 <div class="overlay" id="moreOverlay">
   <div class="sheet">
     <button class="closeX" data-close="moreOverlay">&#10005;</button>
-    <h1>Menu</h1>
-    <h2 style="clear:both">FIELD</h2>
+    <h1 data-i18n="hMenu">Menu</h1>
+    <h2 style="clear:both" data-i18n="hGuide">GUIDANCE</h2>
     <div class="opGrid">
-      <button class="opBtn" id="mNewAB">New A&#8211;B line</button>
-      <button class="opBtn" id="mClearCov">Clear coverage</button>
-      <button class="opBtn" id="mSetup">Job setup</button>
-      <button class="opBtn" id="mExit">Exit to start</button>
+      <button class="opBtn" id="mNewAB" data-i18n="mNewAB">New A&#8211;B line</button>
+      <button class="opBtn" id="mCurve" data-i18n="mCurve">Record curved pass</button>
     </div>
-    <h2>ABOUT</h2>
-    <p>Estancia R&iacute;o Grande field guidance &#8212; AB lines, lightbar steering aid, and coverage mapping. All data stays on this phone.</p>
+    <h2 data-i18n="hField">FIELD</h2>
+    <div class="opGrid">
+      <button class="opBtn" id="mBoundary" data-i18n="mBoundary">Record boundary</button>
+      <button class="opBtn" id="mClearCov" data-i18n="mClearCov">Clear coverage</button>
+      <button class="opBtn" id="mSaveField" data-i18n="mSaveField">Save field</button>
+      <button class="opBtn" id="mFields" data-i18n="mFields">My fields</button>
+      <button class="opBtn" id="mResume" data-i18n="mResume">Resume last session</button>
+      <button class="opBtn" id="mSummary" data-i18n="mSummary">Job summary</button>
+    </div>
+    <h2 data-i18n="hApp">APP</h2>
+    <div class="opGrid">
+      <button class="opBtn" id="mSetup" data-i18n="mSetup">Job setup</button>
+      <button class="opBtn" id="mExit" data-i18n="mExit">Exit to start</button>
+    </div>
+    <p style="margin-top:12px" data-i18n="aboutTxt">Estancia R&iacute;o Grande field guidance &#8212; all data stays on this phone.</p>
+  </div>
+</div>
+
+<!-- ======= FIELDS OVERLAY ======= -->
+<div class="overlay" id="fieldsOverlay">
+  <div class="sheet">
+    <button class="closeX" data-close="fieldsOverlay">&#10005;</button>
+    <h1 data-i18n="hFields">My fields</h1>
+    <div id="fieldList" style="clear:both; margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ======= SUMMARY OVERLAY ======= -->
+<div class="overlay" id="summaryOverlay">
+  <div class="sheet">
+    <button class="closeX" data-close="summaryOverlay">&#10005;</button>
+    <h1 data-i18n="hSummary">Job summary</h1>
+    <div class="sumGrid" style="clear:both">
+      <div class="sumCell"><div class="sv" id="sumHa">0.00</div><div class="sl" data-i18n="sumHa">worked (ha)</div></div>
+      <div class="sumCell"><div class="sv" id="sumTime">0:00</div><div class="sl" data-i18n="sumTime">working time</div></div>
+      <div class="sumCell"><div class="sv" id="sumRate">&#8211;</div><div class="sl" data-i18n="sumRate">ha / hour</div></div>
+      <div class="sumCell"><div class="sv" id="sumApplied">&#8211;</div><div class="sl" id="sumAppliedL" data-i18n="sumApplied">est. applied</div></div>
+      <div class="sumCell"><div class="sv" id="sumField">&#8211;</div><div class="sl" data-i18n="sumField">field area (ha)</div></div>
+      <div class="sumCell"><div class="sv" id="sumPct">&#8211;</div><div class="sl" data-i18n="sumPct">~% complete</div></div>
+    </div>
+    <div class="opGrid">
+      <button class="opBtn" id="btnKml" data-i18n="btnKml">Export KML</button>
+      <button class="opBtn" id="btnNewJob" data-i18n="btnNewJob">New job (clear)</button>
+    </div>
+    <p style="margin-top:10px" data-i18n="kmlNote">KML opens in Google Earth &#8212; your season record of every pass.</p>
   </div>
 </div>
 
@@ -237,24 +308,8 @@
 <div class="overlay" id="infoOverlay">
   <div class="sheet">
     <button class="closeX" data-close="infoOverlay">&#10005;</button>
-    <h1>How to use</h1>
-    <h2 style="clear:both">IN THE FIELD</h2>
-    <p>1. Mount the phone in the cab, plugged into power.<br>
-       2. Start a job, drive to your first pass, tap <b>SET A</b>, drive at least 30 m along it, tap <b>SET B</b>.<br>
-       3. Follow the lightbar: the arrow points the way to steer, the number is how far you are off the line.<br>
-       4. Tap <b>WORK</b> when the implement is engaged &#8212; it paints your coverage and totals hectares. Tap again on headland turns.</p>
-    <h2>ACCURACY &#8212; BE HONEST WITH YOURSELF</h2>
-    <table>
-      <tr><th>Source</th><th>Error</th><th>OK for</th></tr>
-      <tr><td>Phone GPS</td><td>3&#8211;5 m</td><td>spreading, spraying, disking</td></tr>
-      <tr><td>External RTK receiver</td><td>2&#8211;30 cm</td><td>planting, bedding</td></tr>
-      <tr><td>Autosteer kit</td><td>2.5 cm</td><td>everything, hands-free</td></tr>
-    </table>
-    <p>Overlap costs real money in seed, urea and diesel &#8212; but so does a gap in a urea pass. With phone GPS, set width slightly narrower than the implement to bias toward overlap.</p>
-    <h2>RUNNING WITH REAL GPS ON IPHONE</h2>
-    <p>Safari only allows GPS on pages served over HTTPS. Upload this single file to any free static host (tiiny.host, Netlify Drop, GitHub Pages), open the link in Safari, allow location, then <b>Share &#8594; Add to Home Screen</b> so it launches full-screen like a native app. It works offline after first load &#8212; and there is no signal needed in the field, GPS is satellite-only.</p>
-    <h2>TIPS</h2>
-    <p>Keep the phone screen on (Settings &#8594; Display &#8594; Auto-Lock &#8594; Never while working). The app also requests a screen wake lock automatically. Audio alert beeps when you drift past the tolerance &#8212; toggle with the bell.</p>
+    <h1 data-i18n="hInfo">How to use</h1>
+    <div id="infoBody"></div>
   </div>
 </div>
 
@@ -267,87 +322,268 @@ window.onerror = function (msg) {
 const $ = id => document.getElementById(id);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const hyp = (x, y) => Math.sqrt(x * x + y * y);
-const R2D = 180 / Math.PI, D2R = Math.PI / 180;
+const R2D = 180 / Math.PI, D2R = Math.PI / 180, RE = 6371000;
+const r2 = v => Math.round(v * 100) / 100;
 
 /* Safe storage: falls back to memory where localStorage is unavailable (e.g. sandboxed preview) */
 const store = (() => {
   let mem = {};
   let ok = false;
-  try { const t = "__t" + 1; window.localStorage.setItem(t, "1"); window.localStorage.removeItem(t); ok = true; } catch (e) { ok = false; }
+  try { const t = "__t1"; window.localStorage.setItem(t, "1"); window.localStorage.removeItem(t); ok = true; } catch (e) { ok = false; }
   return {
     get(k, d) { try { const v = ok ? window.localStorage.getItem(k) : mem[k]; return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { const s = JSON.stringify(v); if (ok) window.localStorage.setItem(k, s); else mem[k] = s; } catch (e) {} }
+    set(k, v) { try { const s = JSON.stringify(v); if (ok) window.localStorage.setItem(k, s); else mem[k] = s; return true; } catch (e) { return false; } },
+    del(k) { try { if (ok) window.localStorage.removeItem(k); else delete mem[k]; } catch (e) {} }
   };
 })();
 
+/* ================= i18n ================= */
+const I18N = {
+  en: {
+    pass: "pass", more: "more",
+    tagline: "Parallel-pass GPS guidance for the tractor. Pick the job, set the implement width, and go.",
+    hLang: "LANGUAGE / IDIOMA", hOp: "OPERATION", hWidth: "IMPLEMENT WIDTH", hRate: "APPLICATION RATE (optional)",
+    btnGps: "START WITH GPS<small>use this phone&#8217;s position</small>",
+    btnDemo: "DEMO<small>simulator &#8211; try it now</small>",
+    gpsNote: "<b>Phone GPS is ~3&#8211;5 m accurate.</b> Good for spreading, spraying and tillage passes. For planting-grade (2&#8211;30 cm), pair an external RTK receiver later &#8212; the guidance logic stays the same.",
+    btnInfoLbl: "How to use & accuracy guide",
+    bootWarn: "⚠ If this line doesn’t turn green, this viewer is only showing a picture of the app — open https://zerocrash123.github.io in Safari instead.",
+    bootOk: "Ready ✓ — buttons are live. Tap DEMO to try it.",
+    hMenu: "Menu", hGuide: "GUIDANCE", hField: "FIELD", hApp: "APP",
+    mNewAB: "New A–B line", mCurve: "Record curved pass", mBoundary: "Record boundary", mClearCov: "Clear coverage",
+    mSaveField: "Save field", mFields: "My fields", mResume: "Resume last session", mSummary: "Job summary",
+    mSetup: "Job setup", mExit: "Exit to start",
+    aboutTxt: "Estancia Río Grande field guidance — all data stays on this phone.",
+    hFields: "My fields", hSummary: "Job summary",
+    sumHa: "worked (ha)", sumTime: "working time", sumRate: "ha / hour", sumApplied: "est. applied",
+    sumField: "field area (ha)", sumPct: "~% complete",
+    btnKml: "Export KML", btnNewJob: "New job (clear)",
+    kmlNote: "KML opens in Google Earth — your season record of every pass.",
+    hInfo: "How to use",
+    setA: "SET A", setB: "SET B", newAB: "NEW AB", abMode: "AB LINE",
+    driveMark: "drive & mark", drivePass: "drive the pass first", lineSet: "line set ✓", tooClose: "too close — keep driving",
+    work: "WORK", covOff: "coverage off", covOn: "painting ●",
+    finishBnd: "FINISH", finishBndSub: "close boundary", finishCrv: "FINISH", finishCrvSub: "end curve",
+    hintStart: "Set your A–B line to begin", hintB: "Drive along the pass, then tap SET B",
+    hintRecB: "Recording boundary — drive the perimeter, then FINISH",
+    hintRecC: "Recording curve — drive your pass, then FINISH",
+    hintBndDone: "Boundary closed: ", hintBndSmall: "Boundary too small — keep driving",
+    hintCrvDone: "Curve set — follow the lightbar", hintCrvSmall: "Curve too short — keep driving",
+    hintAuto: "Set a line first, then AUTO", hintNoSession: "No saved session found", hintRestored: "Session restored",
+    hintSaved: "Field saved: ", hintLoaded: "Field loaded: ", hintNoFields: "No saved fields yet",
+    onLine: "ON LINE", steerL: "STEER LEFT", steerR: "STEER RIGHT", headland: "HEADLAND",
+    gpsErr: "GPS error: ", gpsPerm: " — check location permission",
+    demoName: "Demo field", fieldDefault: "Field", namePrompt: "Field name:",
+    autoLbl: "AUTO‑STEER",
+    infoBody: `<h2>IN THE FIELD</h2>
+<p>1. Mount the phone in the cab, plugged into power.<br>
+2. Start a job, drive to your first pass, tap <b>SET A</b>, drive 30+ m, tap <b>SET B</b>. For a curved pass use Menu → Record curved pass.<br>
+3. Follow the lightbar: the arrow points the way to steer, the number is how far you are off the line.<br>
+4. Tap <b>WORK</b> when the implement is engaged — it paints coverage and counts hectares.<br>
+5. Menu → Record boundary: drive the perimeter once and the app knows field area, % complete, and warns before the headland.</p>
+<h2>ACCURACY</h2>
+<table><tr><th>Source</th><th>Error</th><th>OK for</th></tr>
+<tr><td>Phone GPS</td><td>3–5 m</td><td>spreading, spraying, disking</td></tr>
+<tr><td>External RTK receiver</td><td>2–30 cm</td><td>planting, bedding</td></tr>
+<tr><td>Autosteer kit</td><td>2.5 cm</td><td>everything, hands-free</td></tr></table>
+<p>With phone GPS, set width slightly narrower than the implement to bias toward overlap instead of gaps.</p>
+<h2>PHONE SETUP</h2>
+<p>Open https://zerocrash123.github.io in Safari → Share → <b>Add to Home Screen</b>. It launches full-screen and works offline — GPS needs no signal. Keep the screen on (the app requests a wake lock; also set Auto-Lock to Never while working). Your fields save on the phone; use Save field after setting lines and boundary.</p>`,
+  },
+  es: {
+    pass: "pasada", more: "menú",
+    tagline: "Guía GPS de pasadas paralelas para el tractor. Elegí el trabajo, fijá el ancho del implemento y listo.",
+    hLang: "LANGUAGE / IDIOMA", hOp: "OPERACIÓN", hWidth: "ANCHO DEL IMPLEMENTO", hRate: "DOSIS DE APLICACIÓN (opcional)",
+    btnGps: "INICIAR CON GPS<small>usa el GPS del teléfono</small>",
+    btnDemo: "DEMO<small>simulador – probalo ya</small>",
+    gpsNote: "<b>El GPS del teléfono tiene ~3–5 m de error.</b> Sirve para abonado, fumigación y rastreado. Para siembra (2–30 cm) hace falta un receptor RTK externo — la lógica de guía es la misma.",
+    btnInfoLbl: "Cómo usar y guía de precisión",
+    bootWarn: "⚠ Si esta línea no se pone verde, este visor solo muestra una imagen de la app — abrí https://zerocrash123.github.io en Safari.",
+    bootOk: "Listo ✓ — botones activos. Tocá DEMO para probar.",
+    hMenu: "Menú", hGuide: "GUÍA", hField: "LOTE", hApp: "APP",
+    mNewAB: "Nueva línea A–B", mCurve: "Grabar pasada curva", mBoundary: "Grabar perímetro", mClearCov: "Borrar cobertura",
+    mSaveField: "Guardar lote", mFields: "Mis lotes", mResume: "Reanudar última sesión", mSummary: "Resumen del trabajo",
+    mSetup: "Configuración", mExit: "Salir al inicio",
+    aboutTxt: "Guía de campo Estancia Río Grande — todos los datos quedan en este teléfono.",
+    hFields: "Mis lotes", hSummary: "Resumen del trabajo",
+    sumHa: "trabajado (ha)", sumTime: "tiempo efectivo", sumRate: "ha / hora", sumApplied: "aplicado est.",
+    sumField: "área del lote (ha)", sumPct: "~% completado",
+    btnKml: "Exportar KML", btnNewJob: "Nuevo trabajo",
+    kmlNote: "El KML se abre en Google Earth — tu registro de cada pasada.",
+    hInfo: "Cómo usar",
+    setA: "MARCAR A", setB: "MARCAR B", newAB: "NUEVA AB", abMode: "LÍNEA AB",
+    driveMark: "avanzá y marcá", drivePass: "recordé la pasada primero", lineSet: "línea lista ✓", tooClose: "muy cerca — seguí avanzando",
+    work: "TRABAJO", covOff: "sin pintar", covOn: "pintando ●",
+    finishBnd: "CERRAR", finishBndSub: "cerrar perímetro", finishCrv: "TERMINAR", finishCrvSub: "fin de curva",
+    hintStart: "Marcá tu línea A–B para empezar", hintB: "Avanzá por la pasada y marcá B",
+    hintRecB: "Grabando perímetro — recorré el borde y tocá CERRAR",
+    hintRecC: "Grabando curva — hacé tu pasada y tocá TERMINAR",
+    hintBndDone: "Perímetro cerrado: ", hintBndSmall: "Perímetro muy chico — seguí manejando",
+    hintCrvDone: "Curva lista — seguí la barra de luces", hintCrvSmall: "Curva muy corta — seguí avanzando",
+    hintAuto: "Marcá una línea primero, después AUTO", hintNoSession: "No hay sesión guardada", hintRestored: "Sesión restaurada",
+    hintSaved: "Lote guardado: ", hintLoaded: "Lote cargado: ", hintNoFields: "Todavía no hay lotes guardados",
+    onLine: "EN LÍNEA", steerL: "GIRÁ IZQUIERDA", steerR: "GIRÁ DERECHA", headland: "CABECERA",
+    gpsErr: "Error de GPS: ", gpsPerm: " — revisá el permiso de ubicación",
+    demoName: "Lote demo", fieldDefault: "Lote", namePrompt: "Nombre del lote:",
+    autoLbl: "PILOTO AUTO",
+    infoBody: `<h2>EN EL CAMPO</h2>
+<p>1. Montá el teléfono en la cabina, enchufado.<br>
+2. Iniciá un trabajo, andá a tu primera pasada, tocá <b>MARCAR A</b>, avanzá 30+ m, tocá <b>MARCAR B</b>. Para pasada curva: Menú → Grabar pasada curva.<br>
+3. Seguí la barra de luces: la flecha indica hacia dónde girar y el número es cuánto estás fuera de línea.<br>
+4. Tocá <b>TRABAJO</b> con el implemento enganchado — pinta la cobertura y cuenta hectáreas.<br>
+5. Menú → Grabar perímetro: recorré el borde una vez y la app sabe el área del lote, el % completado y avisa antes de la cabecera.</p>
+<h2>PRECISIÓN</h2>
+<table><tr><th>Fuente</th><th>Error</th><th>Sirve para</th></tr>
+<tr><td>GPS del teléfono</td><td>3–5 m</td><td>abonado, fumigación, rastra</td></tr>
+<tr><td>Receptor RTK externo</td><td>2–30 cm</td><td>siembra</td></tr>
+<tr><td>Kit de piloto automático</td><td>2,5 cm</td><td>todo, manos libres</td></tr></table>
+<p>Con GPS de teléfono, fijá el ancho un poco menor que el implemento real: mejor solaparse que dejar franjas sin aplicar.</p>
+<h2>EN EL TELÉFONO</h2>
+<p>Abrí https://zerocrash123.github.io en Safari → Compartir → <b>Agregar a inicio</b>. Se abre a pantalla completa y funciona sin señal — el GPS no necesita datos. Mantené la pantalla prendida. Los lotes se guardan en el teléfono con “Guardar lote”.</p>`,
+  }
+};
+function t(k) { return (I18N[S.lang] && I18N[S.lang][k]) || I18N.en[k] || k; }
+
 /* ================= State ================= */
 const OPS = [
-  { id: "spread", name: "Spreading", w: 12.0, tol: 1.0, hint: "urea / fertilizer" },
-  { id: "spray",  name: "Spraying",  w: 18.0, tol: 0.75, hint: "boom passes" },
-  { id: "till",   name: "Tillage",   w: 3.5,  tol: 0.5,  hint: "disk / harrow" },
-  { id: "plant",  name: "Planting",  w: 6.0,  tol: 0.25, hint: "needs RTK really" },
+  { id: "spread", name: { en: "Spreading", es: "Abonado" }, hint: { en: "urea / fertilizer", es: "urea / fertilizante" }, w: 12.0, tol: 1.0, unit: "kg/ha", rStep: 10 },
+  { id: "spray",  name: { en: "Spraying", es: "Fumigación" }, hint: { en: "boom passes", es: "pasadas de botalón" }, w: 18.0, tol: 0.75, unit: "L/ha", rStep: 10 },
+  { id: "till",   name: { en: "Tillage", es: "Rastreado" }, hint: { en: "disk / harrow", es: "rastra / disco" }, w: 3.5, tol: 0.5, unit: "", rStep: 0 },
+  { id: "plant",  name: { en: "Planting", es: "Siembra" }, hint: { en: "needs RTK really", es: "mejor con RTK" }, w: 6.0, tol: 0.25, unit: "kg/ha", rStep: 5 },
 ];
 
 const S = {
+  lang: store.get("lang", (navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en"),
   mode: null,              // 'gps' | 'demo'
   op: store.get("op", "spread"),
   width: store.get("width", 12.0),
+  rate: store.get("rate", 0),
   beep: store.get("beep", true),
   courseUp: true,
   scale: 4,                // px per meter
   origin: null,            // {lat, lon, coslat}
-  pos: null,               // {x, y} meters east/north of origin
-  heading: 0,              // radians, 0 = north, clockwise positive
-  speed: 0,                // m/s
-  acc: null,               // GPS accuracy meters
-  ab: { a: null, b: null },
-  abStage: 0,              // 0 none, 1 A set, 2 complete
+  pos: null,               // smoothed {x, y}
+  rawPos: null,
+  heading: 0, speed: 0, acc: null,
+  gmode: "ab",             // 'ab' | 'curve'
+  ab: { a: null, b: null }, abStage: 0,
+  curve: { rec: false, pts: [], tan: [], ready: false, lastIdx: 0 },
+  bnd: { rec: false, pts: [], closed: false, area: 0 },
   work: false,
-  cov: [],                 // coverage segments {x1,y1,x2,y2}
-  covArea: 0,              // m^2
-  lastCov: null,
-  guid: null,              // latest guidance result
-  watchId: null,
-  wakeLock: null,
+  cov: [], covArea: 0, lastCov: null,
+  guid: null,
+  fieldName: null,
+  job: { workMs: 0, lastTick: null },
+  watchId: null, wakeLock: null,
   sim: { on: false, auto: false, steer: 0, speedIdx: 1, speeds: [4, 8, 12], lockN: null },
-  lastBeep: 0,
-  audio: null,
+  lastBeep: 0, lastHeadBeep: 0, audio: null, dirty: false,
 };
-
 function opDef() { return OPS.find(o => o.id === S.op) || OPS[0]; }
 
 /* ================= Geometry ================= */
 function llToXY(lat, lon) {
   const o = S.origin;
-  return { x: (lon - o.lon) * D2R * 6371000 * o.coslat, y: (lat - o.lat) * D2R * 6371000 };
+  return { x: (lon - o.lon) * D2R * RE * o.coslat, y: (lat - o.lat) * D2R * RE };
+}
+function xyToLL(x, y) {
+  const o = S.origin;
+  return { lat: o.lat + y / (RE * D2R), lon: o.lon + x / (RE * D2R * o.coslat) };
 }
 function headingVec() { return { x: Math.sin(S.heading), y: Math.cos(S.heading) }; }
+function cross2(ax, ay, bx, by) { return ax * by - ay * bx; }
 
-function computeGuidance() {
-  if (S.abStage < 2 || !S.pos) return null;
+function polyArea(pts) {
+  let s = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) s += pts[j].x * pts[i].y - pts[i].x * pts[j].y;
+  return Math.abs(s) / 2;
+}
+function pointInPoly(p, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i], b = pts[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+function rayPolyDist(p, dv, pts) {
+  let best = Infinity;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[j], b = pts[i];
+    const ex = b.x - a.x, ey = b.y - a.y;
+    const den = cross2(dv.x, dv.y, ex, ey);
+    if (Math.abs(den) < 1e-9) continue;
+    const qx = a.x - p.x, qy = a.y - p.y;
+    const tt = cross2(qx, qy, ex, ey) / den;
+    const ss = cross2(qx, qy, dv.x, dv.y) / den;
+    if (tt > 0 && ss >= 0 && ss <= 1 && tt < best) best = tt;
+  }
+  return best;
+}
+
+/* ================= Guidance ================= */
+function abGuidance() {
   const { a, b } = S.ab;
   let ux = b.x - a.x, uy = b.y - a.y;
   const L = hyp(ux, uy); if (L < 1) return null;
   ux /= L; uy /= L;
-  const dx = S.pos.x - a.x, dy = S.pos.y - a.y;
-  const z = ux * dy - uy * dx;                 // signed offset toward left-normal of AB
+  const d = cross2(ux, uy, S.pos.x - a.x, S.pos.y - a.y); // signed offset toward left normal
   const w = S.width;
-  const n = Math.round(z / w);                 // pass index
-  const lat = n * w - z;                       // toward-target displacement along left-normal (signed)
-  // world vector from tractor to target line:
-  const lnx = -uy, lny = ux;                   // left normal
-  const tx = lat * lnx, ty = lat * lny;
+  const n = Math.round(d / w);
+  const latAmt = n * w - d;
+  const lnx = -uy, lny = ux;
   const hv = headingVec();
-  const rvx = hv.y, rvy = -hv.x;               // tractor's right side
-  const side = tx * rvx + ty * rvy;            // >0: target to the right
-  const xte = Math.abs(lat);
-  return { n, xte, side, ux, uy, lnx, lny, a, w };
+  const side = (latAmt * lnx) * hv.y - (latAmt * lny) * hv.x; // dot(toTarget, rightv)
+  return { n, xte: Math.abs(latAmt), side, d, w, du: { x: ux, y: uy }, nrm: { x: lnx, y: lny }, a };
+}
+function nearestOnCurve(p) {
+  const pts = S.curve.pts;
+  let best = null;
+  const scan = (from, to) => {
+    for (let i = from; i <= to; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const ex = b.x - a.x, ey = b.y - a.y;
+      const len2 = ex * ex + ey * ey; if (len2 < 1e-9) continue;
+      let tt = ((p.x - a.x) * ex + (p.y - a.y) * ey) / len2;
+      tt = clamp(tt, 0, 1);
+      const qx = a.x + ex * tt, qy = a.y + ey * tt;
+      const d2 = (p.x - qx) ** 2 + (p.y - qy) ** 2;
+      if (!best || d2 < best.d2) best = { d2, i, tt, qx, qy };
+    }
+  };
+  const c = S.curve.lastIdx || 0;
+  scan(Math.max(0, c - 80), Math.min(pts.length - 2, c + 80));
+  if (!best || best.d2 > 900) { best = null; scan(0, pts.length - 2); }
+  if (best) S.curve.lastIdx = best.i;
+  return best;
+}
+function curveGuidance() {
+  if (!S.curve.ready || S.curve.pts.length < 4) return null;
+  const nr = nearestOnCurve(S.pos);
+  if (!nr) return null;
+  const T = S.curve.tan;
+  const t0 = T[nr.i], t1 = T[Math.min(nr.i + 1, T.length - 1)];
+  let tx = t0.x + (t1.x - t0.x) * nr.tt, ty = t0.y + (t1.y - t0.y) * nr.tt;
+  const tl = hyp(tx, ty) || 1; tx /= tl; ty /= tl;
+  const d = cross2(tx, ty, S.pos.x - nr.qx, S.pos.y - nr.qy); // offset from base curve toward left normal
+  const w = S.width;
+  const n = Math.round(d / w);
+  const latAmt = n * w - d;
+  const lnx = -ty, lny = tx;
+  const hv = headingVec();
+  const side = (latAmt * lnx) * hv.y - (latAmt * lny) * hv.x;
+  return { n, xte: Math.abs(latAmt), side, d, w, du: { x: tx, y: ty }, nrm: { x: lnx, y: lny }, nearIdx: nr.i };
+}
+function computeGuidance() {
+  if (!S.pos) return null;
+  if (S.gmode === "curve") return curveGuidance();
+  if (S.abStage < 2) return null;
+  return abGuidance();
 }
 
 /* ================= Lightbar ================= */
 const LED_N = 13;
 const ledsEl = $("leds");
-for (let i = 0; i < LED_N; i++) { const d = document.createElement("div"); d.className = "led"; ledsEl.appendChild(d); }
+for (let i = 0; i < LED_N; i++) { const dd = document.createElement("div"); dd.className = "led"; ledsEl.appendChild(dd); }
 const ledEls = [...ledsEl.children];
 
 function fmtDist(m) {
@@ -355,15 +591,24 @@ function fmtDist(m) {
   if (m < 99.5) return m.toFixed(1) + " m";
   return Math.round(m) + " m";
 }
+function passLabel(n) { return n === 0 ? "AB" : (n > 0 ? "L" + n : "R" + (-n)); }
+
+let hintOverride = null; // {text, until}
+function setHint(text, ms) { hintOverride = { text, until: performance.now() + (ms || 2500) }; $("xteHint").textContent = text; }
 
 function updateLightbar() {
   const g = S.guid;
   const xv = $("xteVal"), hint = $("xteHint"), aL = $("arrL"), aR = $("arrR");
+  if (hintOverride && performance.now() < hintOverride.until) { /* keep override text */ }
+  else hintOverride = null;
+  if (S.bnd.rec) { if (!hintOverride) hint.textContent = t("hintRecB"); }
+  else if (S.curve.rec) { if (!hintOverride) hint.textContent = t("hintRecC"); }
   if (!g) {
     xv.textContent = "--"; xv.className = "";
     aL.classList.remove("show"); aR.classList.remove("show");
     ledEls.forEach(l => l.className = "led");
-    hint.textContent = S.abStage === 1 ? "Drive along the pass, then tap SET B" : "Set your A–B line to begin";
+    if (!hintOverride && !S.bnd.rec && !S.curve.rec)
+      hint.textContent = S.abStage === 1 ? t("hintB") : t("hintStart");
     return;
   }
   const tol = opDef().tol;
@@ -373,8 +618,8 @@ function updateLightbar() {
   const right = g.side > 0;
   aL.classList.toggle("show", xte > tol && !right);
   aR.classList.toggle("show", xte > tol && right);
-  hint.textContent = xte <= tol ? "ON LINE — pass " + passLabel(g.n) : ("STEER " + (right ? "RIGHT" : "LEFT") + " — pass " + passLabel(g.n));
-  // LEDs: center green when on line; off-line lights LEDs on the side to steer toward
+  if (!hintOverride && !S.bnd.rec && !S.curve.rec)
+    hint.textContent = (xte <= tol ? t("onLine") : (right ? t("steerR") : t("steerL"))) + " — " + t("pass") + " " + passLabel(g.n);
   const c = (LED_N - 1) / 2;
   const mag = clamp(Math.ceil((xte - tol) / Math.max(tol, 0.15)), 0, c);
   ledEls.forEach((l, i) => {
@@ -383,19 +628,17 @@ function updateLightbar() {
     else if (right && i > c && i <= c + mag) l.classList.add("on-r");
     else if (!right && i < c && i >= c - mag) l.classList.add("on-l");
   });
-  // beep on drift
   if (S.beep && xte > tol * 3) {
     const now = performance.now();
-    if (now - S.lastBeep > 1200) { S.lastBeep = now; beep(); }
+    if (now - S.lastBeep > 1200) { S.lastBeep = now; beep(880); }
   }
 }
-function passLabel(n) { return n === 0 ? "AB" : (n > 0 ? "L" + n : "R" + (-n)); }
 
-function beep() {
+function beep(freq) {
   try {
     if (!S.audio) return;
     const ctx = S.audio, o = ctx.createOscillator(), gn = ctx.createGain();
-    o.frequency.value = 880; o.type = "square";
+    o.frequency.value = freq || 880; o.type = "square";
     gn.gain.setValueAtTime(0.08, ctx.currentTime);
     gn.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
     o.connect(gn); gn.connect(ctx.destination);
@@ -405,6 +648,55 @@ function beep() {
 function initAudio() {
   if (S.audio) return;
   try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) S.audio = new AC(); } catch (e) {}
+}
+
+/* ================= Recording: boundary & curve ================= */
+function recBoundaryPoint() {
+  const pts = S.bnd.pts;
+  if (!pts.length || hyp(S.pos.x - pts[pts.length - 1].x, S.pos.y - pts[pts.length - 1].y) >= 2) {
+    pts.push({ x: S.pos.x, y: S.pos.y });
+    if (pts.length > 6000) S.bnd.rec = false;
+  }
+}
+function finishBoundary() {
+  if (S.bnd.pts.length < 8 || polyArea(S.bnd.pts) < 100) { setHint(t("hintBndSmall")); return false; }
+  S.bnd.rec = false; S.bnd.closed = true; S.bnd.area = polyArea(S.bnd.pts);
+  setHint(t("hintBndDone") + (S.bnd.area / 10000).toFixed(2) + " ha", 4000);
+  S.dirty = true;
+  updateAbBtn(); updateHud(); render();
+  return true;
+}
+function recCurvePoint() {
+  const pts = S.curve.pts;
+  if (!pts.length || hyp(S.pos.x - pts[pts.length - 1].x, S.pos.y - pts[pts.length - 1].y) >= 1.5) {
+    pts.push({ x: S.pos.x, y: S.pos.y });
+    if (pts.length > 4000) finishCurve();
+  }
+}
+function buildCurveTangents() {
+  const pts = S.curve.pts, T = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 2)], b = pts[Math.min(pts.length - 1, i + 2)];
+    let tx = b.x - a.x, ty = b.y - a.y;
+    const l = hyp(tx, ty) || 1;
+    T.push({ x: tx / l, y: ty / l });
+  }
+  S.curve.tan = T;
+}
+function finishCurve() {
+  const pts = S.curve.pts;
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) len += hyp(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  if (pts.length < 10 || len < 15) { setHint(t("hintCrvSmall")); return false; }
+  S.curve.rec = false; S.curve.ready = true; S.curve.lastIdx = 0;
+  buildCurveTangents();
+  S.gmode = "curve"; S.sim.lockN = null;
+  $("btnWork").disabled = false;
+  setHint(t("hintCrvDone"), 3500);
+  S.dirty = true;
+  S.guid = computeGuidance();
+  updateAbBtn(); updateLightbar(); render();
+  return true;
 }
 
 /* ================= Coverage ================= */
@@ -417,9 +709,34 @@ function updateCoverage() {
     S.covArea += d * S.width;
     if (S.cov.length > 250000) S.cov.splice(0, 50000);
     S.lastCov = { ...S.pos };
+    S.dirty = true;
   } else if (d >= 50) {
-    S.lastCov = { ...S.pos }; // GPS jump — don't paint across it
+    S.lastCov = { ...S.pos };
   }
+}
+
+/* ================= Headland warning ================= */
+function checkHeadland() {
+  const chip = $("chipHead");
+  if (!S.bnd.closed || !S.pos || S.speed < 1 || !pointInPoly(S.pos, S.bnd.pts)) { chip.classList.add("hide"); return; }
+  const dist = rayPolyDist(S.pos, headingVec(), S.bnd.pts);
+  const warnAt = Math.max(15, S.speed * 6);
+  if (dist < warnAt) {
+    chip.classList.remove("hide");
+    $("chipHeadV").textContent = Math.round(dist) + " m";
+    $("chipHeadL").textContent = t("headland");
+    if (S.beep) {
+      const now = performance.now();
+      if (now - S.lastHeadBeep > 1500) { S.lastHeadBeep = now; beep(660); setTimeout(() => beep(660), 220); }
+    }
+  } else chip.classList.add("hide");
+}
+
+/* ================= Job time ================= */
+function tickJob() {
+  const now = Date.now();
+  if (S.job.lastTick != null && S.work) S.job.workMs += Math.min(now - S.job.lastTick, 5000);
+  S.job.lastTick = now;
 }
 
 /* ================= Canvas ================= */
@@ -446,6 +763,7 @@ function w2s(px, py, B) {
     y: B.cy - (qx * B.up.x + qy * B.up.y) * S.scale
   };
 }
+function viewRadius() { return hyp(CW, CH) / 2 / S.scale + 10; }
 
 function render() {
   ctx.clearRect(0, 0, CW, CH);
@@ -453,20 +771,17 @@ function render() {
   if (!S.pos) { drawIdle(); return; }
   const B = basis();
   drawGrid(B);
+  drawBoundary(B);
   drawCoverage(B);
-  drawGuidanceLines(B);
+  drawGuidance(B);
   drawABPoints(B);
   drawTractor(B);
   drawNorth(B);
 }
-
 function drawIdle() {
   ctx.fillStyle = "#8b98a5"; ctx.font = "600 15px -apple-system, sans-serif"; ctx.textAlign = "center";
-  ctx.fillText("Waiting for position…", CW / 2, CH / 2);
+  ctx.fillText("…", CW / 2, CH / 2);
 }
-
-function viewRadius() { return hyp(CW, CH) / 2 / S.scale + 10; }
-
 function drawGrid(B) {
   const step = S.scale > 6 ? 10 : (S.scale > 1.5 ? 50 : 100);
   const r = viewRadius();
@@ -478,7 +793,21 @@ function drawGrid(B) {
   for (let y = y0; y <= y1; y += step) { const p1 = w2s(x0, y, B), p2 = w2s(x1, y, B); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
   ctx.stroke();
 }
-
+function drawBoundary(B) {
+  const pts = S.bnd.pts;
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  const p0 = w2s(pts[0].x, pts[0].y, B); ctx.moveTo(p0.x, p0.y);
+  for (let i = 1; i < pts.length; i++) { const p = w2s(pts[i].x, pts[i].y, B); ctx.lineTo(p.x, p.y); }
+  if (S.bnd.closed) {
+    ctx.closePath();
+    ctx.fillStyle = "rgba(88,166,255,0.06)"; ctx.fill();
+    ctx.strokeStyle = "rgba(88,166,255,0.65)"; ctx.lineWidth = 2; ctx.setLineDash([]);
+  } else {
+    ctx.strokeStyle = "rgba(88,166,255,0.65)"; ctx.lineWidth = 2; ctx.setLineDash([5, 6]);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+}
 function drawCoverage(B) {
   if (!S.cov.length) return;
   const r = viewRadius();
@@ -494,35 +823,71 @@ function drawCoverage(B) {
   }
   ctx.stroke();
 }
-
-function drawGuidanceLines(B) {
+function drawGuidance(B) {
   const g = S.guid;
+  if (S.gmode === "curve") { drawCurveGuidance(B, g); return; }
   if (S.abStage < 2) return;
   const { a, b } = S.ab;
   let ux = b.x - a.x, uy = b.y - a.y; const L = hyp(ux, uy); if (L < 1) return;
   ux /= L; uy /= L;
   const lnx = -uy, lny = ux, w = S.width;
   const r = viewRadius();
-  // current signed offset of tractor from AB
-  const z = ux * (S.pos.y - a.y) - uy * (S.pos.x - a.x);
+  const z = cross2(ux, uy, S.pos.x - a.x, S.pos.y - a.y);
   const nNow = Math.round(z / w);
   const range = Math.ceil(r / w) + 1;
-  const t0 = ux * (S.pos.x - a.x) + uy * (S.pos.y - a.y); // along-line coordinate of tractor
+  const t0 = ux * (S.pos.x - a.x) + uy * (S.pos.y - a.y);
   for (let n = nNow - range; n <= nNow + range; n++) {
     const cx0 = a.x + lnx * n * w, cy0 = a.y + lny * n * w;
     const p1 = w2s(cx0 + ux * (t0 - r * 1.5), cy0 + uy * (t0 - r * 1.5), B);
     const p2 = w2s(cx0 + ux * (t0 + r * 1.5), cy0 + uy * (t0 + r * 1.5), B);
-    const isTarget = g && n === g.n;
-    const isAB = n === 0;
-    ctx.strokeStyle = isTarget ? "#d29922" : (isAB ? "rgba(88,166,255,0.8)" : "rgba(139,152,165,0.30)");
-    ctx.lineWidth = isTarget ? 3 : (isAB ? 2 : 1.25);
-    if (isAB && !isTarget) ctx.setLineDash([]); else if (!isTarget && !isAB) ctx.setLineDash([6, 8]); else ctx.setLineDash([]);
+    styleGuideLine(g && n === g.n, n === 0);
     ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
     ctx.setLineDash([]);
   }
 }
-
+function styleGuideLine(isTarget, isBase) {
+  ctx.strokeStyle = isTarget ? "#d29922" : (isBase ? "rgba(88,166,255,0.8)" : "rgba(139,152,165,0.30)");
+  ctx.lineWidth = isTarget ? 3 : (isBase ? 2 : 1.25);
+  if (!isTarget && !isBase) ctx.setLineDash([6, 8]); else ctx.setLineDash([]);
+}
+function drawCurveGuidance(B, g) {
+  const pts = S.curve.pts;
+  if (pts.length < 4) {
+    // while recording show the raw path
+    if (S.curve.rec && pts.length > 1) drawPolyline(pts, B, "rgba(210,153,34,0.8)", 2);
+    return;
+  }
+  if (S.curve.rec) { drawPolyline(pts, B, "rgba(210,153,34,0.8)", 2); return; }
+  const w = S.width, r = viewRadius();
+  const T = S.curve.tan;
+  const center = g ? (g.nearIdx || 0) : (S.curve.lastIdx || 0);
+  const halfWin = Math.ceil(r / 1.5) + 30;
+  const i0 = Math.max(0, center - halfWin), i1 = Math.min(pts.length - 1, center + halfWin);
+  const dNow = g ? g.d : 0;
+  const nNow = Math.round(dNow / w);
+  const range = Math.ceil(r / w) + 1;
+  for (let n = nNow - range; n <= nNow + range; n++) {
+    styleGuideLine(g && n === g.n, n === 0);
+    ctx.beginPath();
+    let started = false;
+    for (let i = i0; i <= i1; i++) {
+      const nx = -T[i].y, ny = T[i].x;
+      const px = pts[i].x + nx * n * w, py = pts[i].y + ny * n * w;
+      const p = w2s(px, py, B);
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; } else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+function drawPolyline(pts, B, color, lw) {
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash([]);
+  ctx.beginPath();
+  const p0 = w2s(pts[0].x, pts[0].y, B); ctx.moveTo(p0.x, p0.y);
+  for (let i = 1; i < pts.length; i++) { const p = w2s(pts[i].x, pts[i].y, B); ctx.lineTo(p.x, p.y); }
+  ctx.stroke();
+}
 function drawABPoints(B) {
+  if (S.gmode !== "ab") return;
   const pts = [];
   if (S.ab.a) pts.push({ p: S.ab.a, l: "A" });
   if (S.ab.b) pts.push({ p: S.ab.b, l: "B" });
@@ -534,15 +899,13 @@ function drawABPoints(B) {
     ctx.fillText(l, s.x, s.y + 0.5);
   }
 }
-
 function drawTractor(B) {
   const hv = headingVec();
   const rv = { x: hv.y, y: -hv.x };
-  const P = S.pos, len = 3.2, wid = 1.5; // meters
+  const P = S.pos, len = 3.2, wid = 1.5;
   const nose = w2s(P.x + hv.x * len, P.y + hv.y * len, B);
   const bl = w2s(P.x - hv.x * len * 0.6 + rv.x * -wid, P.y - hv.y * len * 0.6 + rv.y * -wid, B);
   const br = w2s(P.x - hv.x * len * 0.6 + rv.x * wid, P.y - hv.y * len * 0.6 + rv.y * wid, B);
-  // implement bar
   const half = S.width / 2;
   const i1 = w2s(P.x + rv.x * -half, P.y + rv.y * -half, B);
   const i2 = w2s(P.x + rv.x * half, P.y + rv.y * half, B);
@@ -553,7 +916,6 @@ function drawTractor(B) {
   ctx.strokeStyle = "#0d1117"; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(nose.x, nose.y); ctx.lineTo(bl.x, bl.y); ctx.lineTo(br.x, br.y); ctx.closePath(); ctx.fill(); ctx.stroke();
 }
-
 function drawNorth(B) {
   const x = CW - 30, y = 76;
   const a = S.courseUp ? -S.heading : 0;
@@ -575,11 +937,19 @@ function updateHud() {
   if (S.mode === "demo") { gv.textContent = "SIM"; gl.textContent = "demo"; gw.classList.remove("alert"); }
   else if (S.acc == null) { gv.textContent = "–"; gl.textContent = "GPS"; gw.classList.remove("alert"); }
   else { gv.textContent = "±" + Math.round(S.acc) + "m"; gl.textContent = "GPS"; gw.classList.toggle("alert", S.acc > 10); }
+  const cf = $("chipField");
+  if (S.bnd.closed && S.bnd.area > 0) {
+    cf.classList.remove("hide");
+    const pct = clamp(S.covArea / S.bnd.area * 100, 0, 999);
+    $("chipFieldV").textContent = (S.bnd.area / 10000).toFixed(1) + " ha · " + Math.round(pct) + "%";
+    $("chipFieldL").textContent = S.lang === "es" ? "lote" : "field";
+  } else cf.classList.add("hide");
 }
 
 /* ================= Main update ================= */
 function onPosition(x, y, headingRad, speedMs, acc) {
   const prev = S.pos;
+  S.rawPos = { x, y };
   S.pos = { x, y };
   if (headingRad != null) S.heading = headingRad;
   else if (prev) {
@@ -587,79 +957,96 @@ function onPosition(x, y, headingRad, speedMs, acc) {
     if (hyp(dx, dy) > 0.8) S.heading = Math.atan2(dx, dy);
   }
   if (speedMs != null) S.speed = speedMs;
-  else if (prev) S.speed = S.speed * 0.6 + hyp(x - prev.x, y - prev.y) * 0.4; // rough, assumes ~1Hz
+  else if (prev) S.speed = S.speed * 0.6 + hyp(x - prev.x, y - prev.y) * 0.4;
   S.acc = acc;
+  if (S.bnd.rec) recBoundaryPoint();
+  if (S.curve.rec) recCurvePoint();
   S.guid = computeGuidance();
   updateCoverage();
+  tickJob();
+  checkHeadland();
   updateLightbar();
   updateHud();
   render();
 }
 
-/* ================= GPS mode ================= */
+/* ================= GPS mode (with smoothing) ================= */
+const FLT = { x: null, y: null, h: null };
+function smoothGps(x, y) {
+  if (FLT.x == null || hyp(x - FLT.x, y - FLT.y) > 12) { FLT.x = x; FLT.y = y; }
+  else { FLT.x += 0.55 * (x - FLT.x); FLT.y += 0.55 * (y - FLT.y); }
+  return { x: FLT.x, y: FLT.y };
+}
+function smoothHeading(hNew) {
+  if (FLT.h == null) { FLT.h = hNew; return hNew; }
+  let d = hNew - FLT.h;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  FLT.h += 0.5 * d;
+  while (FLT.h > Math.PI) FLT.h -= 2 * Math.PI;
+  while (FLT.h < -Math.PI) FLT.h += 2 * Math.PI;
+  return FLT.h;
+}
 function startGps() {
-  if (!("geolocation" in navigator)) { alert("No GPS available in this browser."); return; }
-  if (window.isSecureContext === false) {
-    alert("GPS needs HTTPS. Host this file on any free static site (tiiny.host, Netlify Drop) and open that link in Safari. Starting DEMO instead so you can explore.");
-    startDemo(); return;
-  }
+  if (!("geolocation" in navigator)) { setHint("No GPS in this browser", 4000); return; }
+  if (window.isSecureContext === false) { startDemo(); return; }
   S.mode = "gps";
   closeSetup();
   requestWake();
+  offerResume();
   S.watchId = navigator.geolocation.watchPosition(p => {
     const c = p.coords;
     if (!S.origin) S.origin = { lat: c.latitude, lon: c.longitude, coslat: Math.cos(c.latitude * D2R) };
-    const { x, y } = llToXY(c.latitude, c.longitude);
+    const raw = llToXY(c.latitude, c.longitude);
+    const sm = smoothGps(raw.x, raw.y);
     let h = null;
-    if (c.heading != null && !isNaN(c.heading) && (c.speed == null || c.speed > 0.4)) h = c.heading * D2R;
-    onPosition(x, y, h, c.speed != null && !isNaN(c.speed) ? c.speed : null, c.accuracy);
+    if (c.heading != null && !isNaN(c.heading) && (c.speed == null || c.speed > 0.4)) h = smoothHeading(c.heading * D2R);
+    onPosition(sm.x, sm.y, h, c.speed != null && !isNaN(c.speed) ? c.speed : null, c.accuracy);
   }, err => {
-    $("xteHint").textContent = "GPS error: " + (err && err.message ? err.message : "no fix") + " — check location permission";
+    $("xteHint").textContent = t("gpsErr") + (err && err.message ? err.message : "no fix") + t("gpsPerm");
   }, { enableHighAccuracy: true, maximumAge: 500, timeout: 15000 });
 }
 
 /* ================= Demo mode ================= */
 let simTimer = null;
+let simState = { x: 0, y: 0, h: 0.35 };
 function startDemo() {
   S.mode = "demo";
-  S.origin = { lat: -17.23, lon: -62.9, coslat: Math.cos(-17.23 * D2R) };
-  S.pos = { x: 0, y: 0 }; S.heading = 0.35; S.speed = 0;
+  if (!S.origin) S.origin = { lat: -17.23, lon: -62.9, coslat: Math.cos(-17.23 * D2R) };
+  S.pos = { x: simState.x, y: simState.y }; S.heading = simState.h; S.speed = 0;
   S.sim.on = true;
   closeSetup();
   $("simPad").classList.add("show");
   requestWake();
+  offerResume();
   if (simTimer) clearInterval(simTimer);
-  let lx = 0, ly = 0, lh = 0.35;
   simTimer = setInterval(() => {
     const dt = 0.1;
     const spd = S.sim.speeds[S.sim.speedIdx] / 3.6;
-    // steering
-    let rate = S.sim.steer * 0.55; // rad/s manual
+    let rate = S.sim.steer * 0.55;
     if (S.sim.auto && S.guid && S.sim.steer === 0) {
       const g = S.guid;
-      if (S.sim.lockN == null) S.sim.lockN = g.n;      // lock target pass while engaged
-      let du = { x: g.ux, y: g.uy };
+      if (S.sim.lockN == null) S.sim.lockN = g.n;
+      let du = { x: g.du.x, y: g.du.y };
       const hv = headingVec();
       if (du.x * hv.x + du.y * hv.y < 0) du = { x: -du.x, y: -du.y };
-      // signed lateral offset to the LOCKED line, + = target to tractor's right
-      const zNow = g.ux * (ly - g.a.y) - g.uy * (lx - g.a.x);
-      const latAmt = S.sim.lockN * g.w - zNow;         // toward left-normal
+      const latAmt = S.sim.lockN * g.w - g.d;
       const rvx = hv.y, rvy = -hv.x;
-      const latRight = latAmt * (g.lnx * rvx + g.lny * rvy);
+      const latRight = latAmt * (g.nrm.x * rvx + g.nrm.y * rvy);
       const look = Math.max(6, spd * 3);
-      const approach = clamp(Math.atan2(latRight, look), -1.05, 1.05); // cap ~60°
+      const approach = clamp(Math.atan2(latRight, look), -1.05, 1.05);
       const desired = Math.atan2(du.x, du.y) + approach;
-      let dh = desired - lh;
+      let dh = desired - simState.h;
       while (dh > Math.PI) dh -= 2 * Math.PI;
       while (dh < -Math.PI) dh += 2 * Math.PI;
       rate = clamp(dh * 2.0, -0.6, 0.6);
     } else if (S.sim.steer !== 0) {
-      S.sim.lockN = null;                              // manual nudge re-targets nearest pass
+      S.sim.lockN = null;
     }
-    lh += rate * dt;
-    lx += Math.sin(lh) * spd * dt;
-    ly += Math.cos(lh) * spd * dt;
-    onPosition(lx, ly, lh, spd, null);
+    simState.h += rate * dt;
+    simState.x += Math.sin(simState.h) * spd * dt;
+    simState.y += Math.cos(simState.h) * spd * dt;
+    onPosition(simState.x, simState.y, simState.h, spd, null);
   }, 100);
 }
 
@@ -677,6 +1064,178 @@ async function requestWake() {
   } catch (e) {}
 }
 
+/* ================= Fields: save / load / autosave ================= */
+function serializeField(name) {
+  return {
+    name: name || S.fieldName || t("fieldDefault"),
+    ts: Date.now(),
+    originLL: S.origin ? { lat: S.origin.lat, lon: S.origin.lon } : null,
+    op: S.op, width: S.width, rate: S.rate, gmode: S.gmode,
+    ab: (S.abStage === 2 && S.ab.a && S.ab.b) ? { a: { x: r2(S.ab.a.x), y: r2(S.ab.a.y) }, b: { x: r2(S.ab.b.x), y: r2(S.ab.b.y) } } : null,
+    bnd: S.bnd.closed ? { pts: S.bnd.pts.map(p => ({ x: r2(p.x), y: r2(p.y) })), area: r2(S.bnd.area) } : null,
+    curve: S.curve.ready ? { pts: S.curve.pts.map(p => ({ x: r2(p.x), y: r2(p.y) })) } : null,
+    cov: decimate(S.cov, 15000).map(s => ({ x1: r2(s.x1), y1: r2(s.y1), x2: r2(s.x2), y2: r2(s.y2) })),
+    covArea: r2(S.covArea),
+    workMs: S.job.workMs,
+  };
+}
+function decimate(arr, max) {
+  if (arr.length <= max) return arr;
+  const step = Math.ceil(arr.length / max), out = [];
+  for (let i = 0; i < arr.length; i += step) out.push(arr[i]);
+  return out;
+}
+function applyField(f) {
+  if (!f || !S.origin) return false;
+  let dx = 0, dy = 0;
+  if (f.originLL) {
+    dx = (f.originLL.lon - S.origin.lon) * D2R * RE * S.origin.coslat;
+    dy = (f.originLL.lat - S.origin.lat) * D2R * RE;
+    if (hyp(dx, dy) > 50000) return false; // >50 km away: wrong field for this location
+  }
+  const tp = p => ({ x: p.x + dx, y: p.y + dy });
+  S.fieldName = f.name || null;
+  S.op = f.op || S.op; S.width = f.width || S.width; S.rate = f.rate || 0;
+  S.gmode = f.gmode === "curve" && f.curve ? "curve" : "ab";
+  if (f.ab) { S.ab = { a: tp(f.ab.a), b: tp(f.ab.b) }; S.abStage = 2; } else { S.ab = { a: null, b: null }; S.abStage = 0; }
+  if (f.bnd && f.bnd.pts) { S.bnd = { rec: false, pts: f.bnd.pts.map(tp), closed: true, area: f.bnd.area || polyArea(f.bnd.pts) }; }
+  else S.bnd = { rec: false, pts: [], closed: false, area: 0 };
+  if (f.curve && f.curve.pts) { S.curve = { rec: false, pts: f.curve.pts.map(tp), tan: [], ready: true, lastIdx: 0 }; buildCurveTangents(); }
+  else S.curve = { rec: false, pts: [], tan: [], ready: false, lastIdx: 0 };
+  S.cov = (f.cov || []).map(s => ({ x1: s.x1 + dx, y1: s.y1 + dy, x2: s.x2 + dx, y2: s.y2 + dy }));
+  S.covArea = f.covArea || 0;
+  S.job.workMs = f.workMs || 0;
+  S.lastCov = null; S.sim.lockN = null;
+  if (S.abStage === 2 || S.curve.ready) $("btnWork").disabled = false;
+  buildOpGrid(); updateWidthUI(); updateRateUI(); updateAbBtn();
+  S.guid = computeGuidance();
+  updateLightbar(); updateHud(); render();
+  return true;
+}
+function saveFieldAs() {
+  let name = null;
+  try { name = window.prompt(t("namePrompt"), S.fieldName || t("fieldDefault") + " 1"); } catch (e) {}
+  if (name === null) name = S.fieldName || t("fieldDefault") + " " + (loadFieldsIndex().length + 1);
+  name = String(name).trim() || t("fieldDefault");
+  const fields = loadFieldsIndex().filter(f => f.name !== name);
+  fields.unshift(serializeField(name));
+  if (fields.length > 30) fields.length = 30;
+  store.set("fields", fields);
+  S.fieldName = name;
+  setHint(t("hintSaved") + name, 3000);
+}
+function loadFieldsIndex() { return store.get("fields", []); }
+function renderFieldList() {
+  const wrap = $("fieldList");
+  const fields = loadFieldsIndex();
+  wrap.innerHTML = "";
+  if (!fields.length) { wrap.innerHTML = "<p>" + t("hintNoFields") + "</p>"; return; }
+  fields.forEach((f, idx) => {
+    const row = document.createElement("div"); row.className = "fieldRow";
+    const b = document.createElement("button"); b.className = "fLoad";
+    const ha = f.bnd ? (f.bnd.area / 10000).toFixed(1) + " ha · " : "";
+    const dte = new Date(f.ts || 0);
+    b.innerHTML = f.name + "<small>" + ha + dte.toLocaleDateString() + "</small>";
+    b.onclick = () => {
+      if (applyField(f)) { $("fieldsOverlay").classList.remove("show"); setHint(t("hintLoaded") + f.name, 3000); }
+      else setHint("⚠ " + f.name + ": >50 km", 3500);
+    };
+    const d = document.createElement("button"); d.className = "fDel"; d.textContent = "✕";
+    d.onclick = () => { const ff = loadFieldsIndex(); ff.splice(idx, 1); store.set("fields", ff); renderFieldList(); };
+    row.appendChild(b); row.appendChild(d); wrap.appendChild(row);
+  });
+}
+/* autosave */
+setInterval(() => {
+  if (S.mode && S.dirty) { store.set("session", serializeField(S.fieldName || "__session")); S.dirty = false; }
+}, 20000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && S.mode) store.set("session", serializeField(S.fieldName || "__session"));
+});
+function resumeSession() {
+  const f = store.get("session", null);
+  if (!f) { setHint(t("hintNoSession"), 3000); return; }
+  if (applyField(f)) { if (f.name && f.name !== "__session") S.fieldName = f.name; setHint(t("hintRestored"), 3000); }
+  else setHint(t("hintNoSession"), 3000);
+}
+function offerResume() {
+  const f = store.get("session", null);
+  if (f && f.ts && Date.now() - f.ts < 36e5 * 24) setHint((S.lang === "es" ? "Menú → " : "Menu → ") + t("mResume"), 5000);
+}
+
+/* ================= Job summary & KML ================= */
+function fmtHM(ms) {
+  const m = Math.round(ms / 60000);
+  return Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0");
+}
+function showSummary() {
+  const ha = S.covArea / 10000;
+  $("sumHa").textContent = ha.toFixed(2);
+  $("sumTime").textContent = fmtHM(S.job.workMs);
+  const hrs = S.job.workMs / 3.6e6;
+  $("sumRate").textContent = hrs > 0.02 ? (ha / hrs).toFixed(1) : "–";
+  const u = opDef().unit;
+  if (S.rate > 0 && u) {
+    const total = S.rate * ha;
+    $("sumApplied").textContent = total >= 1000 ? (total / 1000).toFixed(2) + (u === "L/ha" ? " m³" : " t") : Math.round(total) + " " + u.split("/")[0];
+  } else $("sumApplied").textContent = "–";
+  $("sumField").textContent = S.bnd.closed ? (S.bnd.area / 10000).toFixed(2) : "–";
+  $("sumPct").textContent = S.bnd.closed && S.bnd.area > 0 ? Math.round(clamp(S.covArea / S.bnd.area * 100, 0, 999)) + "%" : "–";
+  $("summaryOverlay").classList.add("show");
+}
+function kmlCoord(p) { const ll = xyToLL(p.x, p.y); return ll.lon.toFixed(7) + "," + ll.lat.toFixed(7) + ",0"; }
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function buildKML() {
+  if (!S.origin) return null;
+  const name = esc(S.fieldName || t("fieldDefault"));
+  let k = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>' + name + '</name>';
+  k += '<Style id="cov"><LineStyle><color>7f36863c</color><width>6</width></LineStyle></Style>';
+  k += '<Style id="bnd"><LineStyle><color>ffffa658</color><width>3</width></LineStyle><PolyStyle><color>1affa658</color></PolyStyle></Style>';
+  k += '<Style id="ab"><LineStyle><color>ff22a9d2</color><width>3</width></LineStyle></Style>';
+  if (S.bnd.closed) {
+    k += '<Placemark><name>Boundary</name><styleUrl>#bnd</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>';
+    k += S.bnd.pts.map(kmlCoord).join(" ") + " " + kmlCoord(S.bnd.pts[0]);
+    k += '</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>';
+  }
+  if (S.abStage === 2 && S.ab.a && S.ab.b) {
+    k += '<Placemark><name>AB line</name><styleUrl>#ab</styleUrl><LineString><coordinates>' + kmlCoord(S.ab.a) + " " + kmlCoord(S.ab.b) + '</coordinates></LineString></Placemark>';
+  }
+  if (S.curve.ready) {
+    k += '<Placemark><name>Curve</name><styleUrl>#ab</styleUrl><LineString><coordinates>' + S.curve.pts.map(kmlCoord).join(" ") + '</coordinates></LineString></Placemark>';
+  }
+  if (S.cov.length) {
+    // chain contiguous segments into polylines
+    let chains = [], cur = [S.cov[0].x1 !== undefined ? { x: S.cov[0].x1, y: S.cov[0].y1 } : null, { x: S.cov[0].x2, y: S.cov[0].y2 }].filter(Boolean);
+    for (let i = 1; i < S.cov.length; i++) {
+      const prev = S.cov[i - 1], s = S.cov[i];
+      if (Math.abs(s.x1 - prev.x2) < 0.05 && Math.abs(s.y1 - prev.y2) < 0.05) cur.push({ x: s.x2, y: s.y2 });
+      else { chains.push(cur); cur = [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }]; }
+    }
+    chains.push(cur);
+    k += '<Folder><name>Coverage</name>';
+    for (const ch of chains) {
+      if (ch.length < 2) continue;
+      k += '<Placemark><styleUrl>#cov</styleUrl><LineString><coordinates>' + ch.map(kmlCoord).join(" ") + '</coordinates></LineString></Placemark>';
+    }
+    k += '</Folder>';
+  }
+  k += '</Document></kml>';
+  return k;
+}
+function exportKML() {
+  const k = buildKML();
+  if (!k) return;
+  try {
+    const blob = new Blob([k], { type: "application/vnd.google-earth.kml+xml" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    const d = new Date();
+    a.download = (S.fieldName || "field").replace(/[^\w\-]+/g, "_") + "-" + d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + ".kml";
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  } catch (e) { setHint("KML export failed", 3000); }
+}
+
 /* ================= UI wiring ================= */
 function closeSetup() { $("setupOverlay").classList.remove("show"); }
 
@@ -685,8 +1244,8 @@ function buildOpGrid() {
   for (const o of OPS) {
     const b = document.createElement("button");
     b.className = "opBtn" + (S.op === o.id ? " sel" : "");
-    b.innerHTML = o.name + "<small>" + o.hint + "</small>";
-    b.onclick = () => { S.op = o.id; S.width = o.w; store.set("op", S.op); store.set("width", S.width); buildOpGrid(); updateWidthUI(); };
+    b.innerHTML = (o.name[S.lang] || o.name.en) + "<small>" + (o.hint[S.lang] || o.hint.en) + "</small>";
+    b.onclick = () => { S.op = o.id; S.width = o.w; store.set("op", S.op); store.set("width", S.width); buildOpGrid(); updateWidthUI(); updateRateUI(); };
     g.appendChild(b);
   }
 }
@@ -694,27 +1253,44 @@ function updateWidthUI() {
   $("widthVal").innerHTML = S.width.toFixed(1) + ' <small>m</small>';
   $("chipWidth").textContent = S.width.toFixed(1);
 }
+function updateRateUI() {
+  const u = opDef().unit;
+  $("rateBlock").style.display = u ? "block" : "none";
+  $("rateVal").innerHTML = (S.rate || 0) + ' <small>' + u + '</small>';
+}
 $("wMinus").onclick = () => { S.width = clamp(Math.round((S.width - 0.5) * 2) / 2, 1, 48); store.set("width", S.width); updateWidthUI(); };
 $("wPlus").onclick = () => { S.width = clamp(Math.round((S.width + 0.5) * 2) / 2, 1, 48); store.set("width", S.width); updateWidthUI(); };
+$("rMinus").onclick = () => { S.rate = Math.max(0, (S.rate || 0) - (opDef().rStep || 10)); store.set("rate", S.rate); updateRateUI(); };
+$("rPlus").onclick = () => { S.rate = (S.rate || 0) + (opDef().rStep || 10); store.set("rate", S.rate); updateRateUI(); };
 
 $("btnStartGps").onclick = () => { initAudio(); startGps(); };
 $("btnStartDemo").onclick = () => { initAudio(); startDemo(); };
-$("btnInfo").onclick = () => $("infoOverlay").classList.add("show");
+$("btnInfo").onclick = () => { $("infoBody").innerHTML = t("infoBody"); $("infoOverlay").classList.add("show"); };
 
+/* Contextual big button: AB set / finish boundary / finish curve / back to AB */
+function updateAbBtn() {
+  const L = $("abLabel"), Su = $("abSub"), btn = $("btnAB");
+  btn.classList.remove("armed");
+  if (S.bnd.rec) { L.textContent = t("finishBnd"); Su.textContent = t("finishBndSub"); btn.classList.add("armed"); return; }
+  if (S.curve.rec) { L.textContent = t("finishCrv"); Su.textContent = t("finishCrvSub"); btn.classList.add("armed"); return; }
+  if (S.gmode === "curve") { L.textContent = t("abMode"); Su.textContent = "curva → AB"; if (S.lang === "en") Su.textContent = "curve → AB"; return; }
+  if (S.abStage === 0) { L.textContent = t("setA"); Su.textContent = t("driveMark"); }
+  else if (S.abStage === 1) { L.textContent = t("setB"); Su.textContent = t("drivePass"); }
+  else { L.textContent = t("newAB"); Su.textContent = t("lineSet"); }
+}
 $("btnAB").onclick = () => {
   if (!S.pos) return;
-  if (S.abStage === 0) {
-    S.ab.a = { ...S.pos }; S.abStage = 1;
-    $("abLabel").textContent = "SET B"; $("abSub").textContent = "drive the pass first";
-  } else if (S.abStage === 1) {
-    if (hyp(S.pos.x - S.ab.a.x, S.pos.y - S.ab.a.y) < 10) { $("abSub").textContent = "too close — keep driving"; return; }
+  if (S.bnd.rec) { finishBoundary(); return; }
+  if (S.curve.rec) { finishCurve(); return; }
+  if (S.gmode === "curve") { S.gmode = "ab"; S.sim.lockN = null; S.guid = computeGuidance(); updateAbBtn(); updateLightbar(); render(); return; }
+  if (S.abStage === 0) { S.ab.a = { ...S.pos }; S.abStage = 1; }
+  else if (S.abStage === 1) {
+    if (hyp(S.pos.x - S.ab.a.x, S.pos.y - S.ab.a.y) < 10) { $("abSub").textContent = t("tooClose"); return; }
     S.ab.b = { ...S.pos }; S.abStage = 2;
-    $("abLabel").textContent = "NEW AB"; $("abSub").textContent = "line set ✓";
     $("btnWork").disabled = false;
-  } else {
-    S.abStage = 0; S.ab.a = null; S.ab.b = null; S.guid = null;
-    $("abLabel").textContent = "SET A"; $("abSub").textContent = "drive & mark";
-  }
+    S.dirty = true;
+  } else { S.abStage = 0; S.ab.a = null; S.ab.b = null; S.sim.lockN = null; }
+  updateAbBtn();
   S.guid = computeGuidance(); updateLightbar(); render();
 };
 
@@ -722,16 +1298,47 @@ $("btnWork").onclick = () => {
   S.work = !S.work;
   S.lastCov = S.pos ? { ...S.pos } : null;
   $("btnWork").classList.toggle("workOn", S.work);
-  $("workSub").textContent = S.work ? "painting ●" : "coverage off";
+  $("workSub").textContent = S.work ? t("covOn") : t("covOff");
+  S.dirty = true;
   render();
 };
 
 $("btnMore").onclick = () => $("moreOverlay").classList.add("show");
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $(b.dataset.close).classList.remove("show"));
-$("mNewAB").onclick = () => { $("moreOverlay").classList.remove("show"); S.abStage = 2; $("btnAB").click(); };
-$("mClearCov").onclick = () => { S.cov = []; S.covArea = 0; S.lastCov = S.pos ? { ...S.pos } : null; $("moreOverlay").classList.remove("show"); updateHud(); render(); };
+
+$("mNewAB").onclick = () => {
+  $("moreOverlay").classList.remove("show");
+  S.gmode = "ab"; S.curve.rec = false;
+  S.abStage = 0; S.ab = { a: null, b: null }; S.sim.lockN = null;
+  S.guid = computeGuidance(); updateAbBtn(); updateLightbar(); render();
+};
+$("mCurve").onclick = () => {
+  $("moreOverlay").classList.remove("show");
+  S.curve = { rec: true, pts: [], tan: [], ready: false, lastIdx: 0 };
+  S.gmode = "curve"; S.sim.lockN = null;
+  S.guid = null; updateAbBtn(); updateLightbar(); render();
+};
+$("mBoundary").onclick = () => {
+  $("moreOverlay").classList.remove("show");
+  S.bnd = { rec: true, pts: [], closed: false, area: 0 };
+  updateAbBtn(); updateLightbar(); render();
+};
+$("mClearCov").onclick = () => { S.cov = []; S.covArea = 0; S.lastCov = S.pos ? { ...S.pos } : null; S.dirty = true; $("moreOverlay").classList.remove("show"); updateHud(); render(); };
+$("mSaveField").onclick = () => { $("moreOverlay").classList.remove("show"); saveFieldAs(); };
+$("mFields").onclick = () => { $("moreOverlay").classList.remove("show"); renderFieldList(); $("fieldsOverlay").classList.add("show"); };
+$("mResume").onclick = () => { $("moreOverlay").classList.remove("show"); resumeSession(); };
+$("mSummary").onclick = () => { $("moreOverlay").classList.remove("show"); showSummary(); };
 $("mSetup").onclick = () => { $("moreOverlay").classList.remove("show"); $("setupOverlay").classList.add("show"); };
-$("mExit").onclick = () => { window.location.reload(); };
+$("mExit").onclick = () => { if (S.mode) store.set("session", serializeField(S.fieldName || "__session")); window.location.reload(); };
+
+$("btnKml").onclick = exportKML;
+$("btnNewJob").onclick = () => {
+  S.cov = []; S.covArea = 0; S.lastCov = S.pos ? { ...S.pos } : null;
+  S.job = { workMs: 0, lastTick: Date.now() };
+  S.dirty = true;
+  $("summaryOverlay").classList.remove("show");
+  updateHud(); render();
+};
 
 $("btnZoomIn").onclick = () => { S.scale = clamp(S.scale * 1.5, 0.4, 24); render(); };
 $("btnZoomOut").onclick = () => { S.scale = clamp(S.scale / 1.5, 0.4, 24); render(); };
@@ -753,21 +1360,48 @@ $("simAuto").onclick = () => {
   S.sim.auto = !S.sim.auto;
   S.sim.lockN = null;
   $("simAuto").classList.toggle("on", S.sim.auto);
-  if (S.sim.auto && S.abStage < 2) { S.sim.auto = false; $("simAuto").classList.remove("on"); $("xteHint").textContent = "Set A–B line first, then AUTO"; }
+  if (S.sim.auto && !S.guid) { S.sim.auto = false; $("simAuto").classList.remove("on"); setHint(t("hintAuto"), 2500); }
 };
 $("simSpeed").onclick = () => {
   S.sim.speedIdx = (S.sim.speedIdx + 1) % S.sim.speeds.length;
   $("simSpeed").textContent = S.sim.speeds[S.sim.speedIdx] + " km/h";
 };
 
+/* ================= Language ================= */
+function applyLang() {
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t(el.dataset.i18n); });
+  $("langEn").classList.toggle("sel", S.lang === "en");
+  $("langEs").classList.toggle("sel", S.lang === "es");
+  $("workLabel").textContent = t("work");
+  $("workSub").textContent = S.work ? t("covOn") : t("covOff");
+  $("simAuto").textContent = t("autoLbl");
+  if (!bootDone) { $("bootStat").textContent = t("bootWarn"); }
+  else { $("bootStat").textContent = t("bootOk"); }
+  buildOpGrid(); updateWidthUI(); updateRateUI(); updateAbBtn(); updateLightbar(); updateHud();
+}
+$("langEn").onclick = () => { S.lang = "en"; store.set("lang", "en"); applyLang(); };
+$("langEs").onclick = () => { S.lang = "es"; store.set("lang", "es"); applyLang(); };
+
+/* ================= Service worker ================= */
+try {
+  if ("serviceWorker" in navigator && window.isSecureContext && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+} catch (e) {}
+
 /* ================= Boot ================= */
-window.__test = { S, computeGuidance, onPosition, startDemo, passLabel };
+let bootDone = false;
+window.__test = { S, computeGuidance, onPosition, startDemo, passLabel, finishBoundary, finishCurve, buildKML, serializeField, applyField, polyArea, rayPolyDist, pointInPoly, t };
 buildOpGrid();
 updateWidthUI();
+updateRateUI();
+updateAbBtn();
 $("btnBeep").style.opacity = S.beep ? 1 : 0.4;
 resize();
 render();
-$("bootStat").textContent = "Ready ✓ — buttons are live. Tap DEMO to try it.";
+bootDone = true;
+applyLang();
 $("bootStat").classList.add("ok");
 </script>
 </body>
