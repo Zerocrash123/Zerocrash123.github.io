@@ -1,5 +1,5 @@
 /* Río Grande Guidance — offline cache (stale-while-revalidate) */
-const C = "rgg-v2";
+const C = "rgg-v2.1";
 const ASSETS = [".", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
