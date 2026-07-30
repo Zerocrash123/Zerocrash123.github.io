@@ -82,7 +82,27 @@
 
   /* ---------- Map ---------- */
   #mapWrap { flex: 1; position: relative; min-height: 0; }
-  #map { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #map { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  #attr {
+    position: absolute; left: 10px; bottom: 6px; font-size: 9px; font-weight: 600;
+    color: rgba(255,255,255,.45); letter-spacing: .03em; pointer-events: none; display: none;
+    text-shadow: 0 1px 2px rgba(0,0,0,.8);
+  }
+  #satPop {
+    position: absolute; right: 64px; bottom: 150px; z-index: 10;
+    background: var(--panel); border: 1px solid var(--line2); border-radius: 16px;
+    padding: 14px; display: none; flex-direction: column; gap: 10px; width: 200px;
+    backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  }
+  #satPop.show { display: flex; }
+  #satPop .spTitle { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  #btnSatToggle {
+    border: 1px solid var(--line2); background: var(--panel2); color: var(--text);
+    border-radius: 11px; padding: 10px; font-size: 14px; font-weight: 800;
+  }
+  #btnSatToggle.on { border-color: rgba(67,196,99,.55); color: var(--green); }
+  #satAlpha { width: 100%; accent-color: var(--amber); height: 30px; }
   .chipCol { position: absolute; display: flex; flex-direction: column; gap: 8px; }
   #chipsTL { top: 10px; left: 10px; }
   #chipsTR { top: 10px; right: 10px; align-items: flex-end; }
@@ -279,7 +299,15 @@
     <div class="chip"><span class="v" id="chipWidth">12.0</span><small>m</small></div>
     <div class="chip hide" id="chipField"><span class="v" id="chipFieldV">&#8211;</span><small id="chipFieldL">lote</small></div>
   </div>
+  <div id="attr">&copy; Esri &middot; Maxar &middot; Earthstar Geographics</div>
+  <div id="satPop">
+    <div class="spTitle" id="spTitle">SATELLITE</div>
+    <button id="btnSatToggle">OFF</button>
+    <input type="range" id="satAlpha" min="15" max="100" value="55">
+  </div>
   <div class="chipCol" id="zoomCol">
+    <button class="mapBtn" id="btnLayers" title="Layers"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4 3 9l9 5 9-5-9-5Z"/><path d="M3 14l9 5 9-5"/></svg></button>
+    <button class="mapBtn hide" id="btnCenter" title="Recenter"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
     <button class="mapBtn" id="btnNorth" title="Orientation"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4l5.5 15L12 15.4 6.5 19 12 4Z"/></svg></button>
     <button class="mapBtn" id="btnZoomIn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="mapBtn" id="btnZoomOut"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
@@ -334,7 +362,7 @@
     </div>
     <div class="note" id="gpsNote" data-i18n="gpsNote"><b>Phone GPS is ~3&#8211;5 m accurate.</b> Good for spreading, spraying and tillage passes. For planting-grade (2&#8211;30 cm), pair an external RTK receiver later &#8212; the guidance logic here stays the same.</div>
     <div class="linkRow"><button id="btnInfo" data-i18n="btnInfoLbl">How to use &amp; accuracy guide</button></div>
-    <div class="ver">v2.1 &middot; <span id="verNote">offline-ready</span></div>
+    <div class="ver">v2.2 &middot; <span id="verNote">offline-ready</span></div>
   </div>
 </div>
 
@@ -351,6 +379,7 @@
     <h2 data-i18n="hField">FIELD</h2>
     <div class="opGrid">
       <button class="opBtn" id="mBoundary" data-i18n="mBoundary">Record boundary</button>
+      <button class="opBtn" id="mDrawBnd" data-i18n="mDrawBnd">Draw boundary</button>
       <button class="opBtn" id="mClearCov" data-i18n="mClearCov">Clear coverage</button>
       <button class="opBtn" id="mSaveField" data-i18n="mSaveField">Save field</button>
       <button class="opBtn" id="mFields" data-i18n="mFields">My fields</button>
@@ -467,6 +496,10 @@ const I18N = {
     gpsErr: "GPS error: ", gpsPerm: " — check location permission",
     demoName: "Demo field", fieldDefault: "Field", namePrompt: "Field name:",
     autoLbl: "AUTO‑STEER",
+    mDrawBnd: "Draw boundary", satLbl: "SATELLITE", on: "ON", off: "OFF",
+    undo: "UNDO", undoSub: "remove point", finishDraw: "FINISH", finishDrawSub: "close outline",
+    hintDraw: "Tap the corners of the field — pan with one finger",
+    hintDrawMore: "Need at least 3 points", hintDrawDone: "Boundary drawn: ",
     infoBody: `<h2>IN THE FIELD</h2>
 <p>1. Mount the phone in the cab, plugged into power.<br>
 2. Start a job, drive to your first pass, tap <b>SET A</b>, drive 30+ m, tap <b>SET B</b>. For a curved pass use Menu → Record curved pass.<br>
@@ -518,6 +551,10 @@ const I18N = {
     gpsErr: "Error de GPS: ", gpsPerm: " — revisá el permiso de ubicación",
     demoName: "Lote demo", fieldDefault: "Lote", namePrompt: "Nombre del lote:",
     autoLbl: "PILOTO AUTO",
+    mDrawBnd: "Dibujar perímetro", satLbl: "SATÉLITE", on: "SÍ", off: "NO",
+    undo: "DESHACER", undoSub: "quitar punto", finishDraw: "CERRAR", finishDrawSub: "cerrar contorno",
+    hintDraw: "Tocá las esquinas del lote — arrastrá para mover el mapa",
+    hintDrawMore: "Mínimo 3 puntos", hintDrawDone: "Perímetro dibujado: ",
     infoBody: `<h2>EN EL CAMPO</h2>
 <p>1. Montá el teléfono en la cabina, enchufado.<br>
 2. Iniciá un trabajo, andá a tu primera pasada, tocá <b>MARCAR A</b>, avanzá 30+ m, tocá <b>MARCAR B</b>. Para pasada curva: Menú → Grabar pasada curva.<br>
@@ -569,6 +606,9 @@ const S = {
   watchId: null, wakeLock: null,
   sim: { on: false, auto: false, steer: 0, speedIdx: 1, speeds: [4, 8, 12], lockN: null },
   lastBeep: 0, lastHeadBeep: 0, audio: null, dirty: false,
+  sat: { on: store.get("satOn", false), alpha: store.get("satAlpha", 0.55) },
+  view: { center: null },          // null = follow tractor; {x,y} = panned
+  draw: { on: false, pts: [] },    // tap-to-draw boundary mode
 };
 function opDef() { return OPS.find(o => o.id === S.op) || OPS[0]; }
 
@@ -693,13 +733,15 @@ function updateLightbar() {
   const xv = $("xteVal"), hint = $("xteHint"), aL = $("arrL"), aR = $("arrR");
   if (hintOverride && performance.now() < hintOverride.until) { /* keep override text */ }
   else hintOverride = null;
-  if (S.bnd.rec) { if (!hintOverride) hint.textContent = t("hintRecB"); }
+  const busy = S.bnd.rec || S.curve.rec || S.draw.on;
+  if (S.draw.on) { if (!hintOverride) hint.textContent = t("hintDraw"); }
+  else if (S.bnd.rec) { if (!hintOverride) hint.textContent = t("hintRecB"); }
   else if (S.curve.rec) { if (!hintOverride) hint.textContent = t("hintRecC"); }
   if (!g) {
     xv.textContent = "--"; xv.className = "";
     aL.classList.remove("show"); aR.classList.remove("show");
     ledEls.forEach(l => l.className = "led");
-    if (!hintOverride && !S.bnd.rec && !S.curve.rec)
+    if (!hintOverride && !busy)
       hint.textContent = S.abStage === 1 ? t("hintB") : t("hintStart");
     return;
   }
@@ -710,7 +752,7 @@ function updateLightbar() {
   const right = g.side > 0;
   aL.classList.toggle("show", xte > tol && !right);
   aR.classList.toggle("show", xte > tol && right);
-  if (!hintOverride && !S.bnd.rec && !S.curve.rec)
+  if (!hintOverride && !busy)
     hint.textContent = (xte <= tol ? t("onLine") : (right ? t("steerR") : t("steerL"))) + " — " + t("pass") + " " + passLabel(g.n);
   const c = (LED_N - 1) / 2;
   const mag = clamp(Math.ceil((xte - tol) / Math.max(tol, 0.15)), 0, c);
@@ -843,33 +885,134 @@ function resize() {
 }
 window.addEventListener("resize", () => { resize(); render(); });
 
+function viewCenterPt() { return S.view.center || S.pos; }
 function basis() {
   const hv = headingVec();
-  const up = S.courseUp ? hv : { x: 0, y: 1 };
-  return { up, right: { x: up.y, y: -up.x }, cx: CW / 2, cy: CH * 0.62 };
+  const followRotate = S.courseUp && !S.draw.on && !S.view.center;
+  const up = followRotate ? hv : { x: 0, y: 1 };
+  const c = viewCenterPt();
+  const cy = (S.draw.on || S.view.center) ? CH * 0.5 : CH * 0.62;
+  return { up, right: { x: up.y, y: -up.x }, cx: CW / 2, cy, c };
 }
 function w2s(px, py, B) {
-  const qx = px - S.pos.x, qy = py - S.pos.y;
+  const qx = px - B.c.x, qy = py - B.c.y;
   return {
     x: B.cx + (qx * B.right.x + qy * B.right.y) * S.scale,
     y: B.cy - (qx * B.up.x + qy * B.up.y) * S.scale
   };
 }
+function s2w(sx, sy, B) {
+  const kx = (sx - B.cx) / S.scale, ky = (B.cy - sy) / S.scale;
+  return {
+    x: B.c.x + B.right.x * kx + B.up.x * ky,
+    y: B.c.y + B.right.y * kx + B.up.y * ky
+  };
+}
 function viewRadius() { return hyp(CW, CH) / 2 / S.scale + 10; }
+
+/* ================= Satellite tiles ================= */
+const TILE_URL = (z, x, y) => "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + y + "/" + x;
+const tileCache = new Map();
+function tileNW(z, x, y) {
+  const n = Math.pow(2, z);
+  return { lat: Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * R2D, lon: x / n * 360 - 180 };
+}
+function getTile(z, x, y) {
+  const key = z + "/" + x + "/" + y;
+  let tc = tileCache.get(key);
+  if (!tc) {
+    tc = { img: new Image(), ok: false, err: false };
+    tc.img.crossOrigin = "anonymous";
+    tc.img.onload = () => { tc.ok = true; render(); };
+    tc.img.onerror = () => { tc.err = true; };
+    tc.img.src = TILE_URL(z, x, y);
+    tileCache.set(key, tc);
+    if (tileCache.size > 220) {
+      const drop = tileCache.size - 180;
+      let i = 0;
+      for (const k of tileCache.keys()) { if (i++ >= drop) break; tileCache.delete(k); }
+    }
+  }
+  return tc;
+}
+function drawSatellite(B) {
+  if (!S.sat.on || !S.origin) return;
+  const c = B.c;
+  const ll0 = xyToLL(c.x, c.y);
+  const coslat = Math.cos(ll0.lat * D2R);
+  let z = clamp(Math.round(Math.log2(156543.03392 * coslat * S.scale)) + 1, 3, 18);
+  const r = viewRadius();
+  let txMin, txMax, tyMin, tyMax;
+  for (;;) {
+    const n = Math.pow(2, z);
+    const llA = xyToLL(c.x - r, c.y + r), llB = xyToLL(c.x + r, c.y - r);
+    const lon2tx = lon => (lon + 180) / 360 * n;
+    const lat2ty = lat => { const s = Math.sin(lat * D2R); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n; };
+    txMin = Math.floor(lon2tx(llA.lon)); txMax = Math.floor(lon2tx(llB.lon));
+    tyMin = Math.floor(lat2ty(llA.lat)); tyMax = Math.floor(lat2ty(llB.lat));
+    if ((txMax - txMin + 1) * (tyMax - tyMin + 1) <= 42 || z <= 3) break;
+    z--;
+  }
+  // affine: EN meters -> screen (on top of DPR base transform)
+  const s = S.scale;
+  const a = s * B.right.x, b = -s * B.up.x, cc = s * B.right.y, d = -s * B.up.y;
+  const e = B.cx - s * (B.right.x * c.x + B.right.y * c.y);
+  const f = B.cy + s * (B.up.x * c.x + B.up.y * c.y);
+  ctx.save();
+  ctx.transform(a, b, cc, d, e, f);
+  ctx.globalAlpha = S.sat.alpha;
+  for (let tx = txMin; tx <= txMax; tx++) {
+    for (let ty = tyMin; ty <= tyMax; ty++) {
+      const tc = getTile(z, tx, ty);
+      if (!tc.ok) continue;
+      const nw = tileNW(z, tx, ty), se = tileNW(z, tx + 1, ty + 1);
+      const pNW = llToXY(nw.lat, nw.lon), pSE = llToXY(se.lat, se.lon);
+      ctx.save();
+      ctx.translate(pNW.x, pNW.y);
+      ctx.scale(1, -1);
+      ctx.drawImage(tc.img, 0, 0, pSE.x - pNW.x, pNW.y - pSE.y);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
 
 function render() {
   ctx.clearRect(0, 0, CW, CH);
   ctx.fillStyle = "#0a0e14"; ctx.fillRect(0, 0, CW, CH);
   if (!S.pos) { drawIdle(); return; }
   const B = basis();
+  drawSatellite(B);
   drawGrid(B);
   drawBoundary(B);
   drawCoverage(B);
   drawGuidance(B);
   drawABPoints(B);
+  drawDrawPts(B);
   drawTractor(B);
   drawVignette();
   drawNorth(B);
+  $("attr").style.display = S.sat.on ? "block" : "none";
+}
+function drawDrawPts(B) {
+  if (!S.draw.on || !S.draw.pts.length) return;
+  const pts = S.draw.pts;
+  if (pts.length > 1) {
+    ctx.setLineDash([7, 7]);
+    drawPolyline(pts, B, "rgba(232,163,61,0.9)", 2.5);
+    ctx.setLineDash([]);
+  }
+  if (pts.length > 2) {
+    const p1 = w2s(pts[pts.length - 1].x, pts[pts.length - 1].y, B), p0 = w2s(pts[0].x, pts[0].y, B);
+    ctx.setLineDash([3, 6]); ctx.strokeStyle = "rgba(232,163,61,0.45)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p0.x, p0.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  pts.forEach((p, i) => {
+    const sp = w2s(p.x, p.y, B);
+    ctx.fillStyle = i === 0 ? "#e8a33d" : "#f2f6fa";
+    ctx.strokeStyle = "#0a0e14"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(sp.x, sp.y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  });
 }
 function drawVignette() {
   const vg = ctx.createRadialGradient(CW / 2, CH * 0.55, Math.min(CW, CH) * 0.38, CW / 2, CH * 0.55, Math.max(CW, CH) * 0.78);
@@ -883,13 +1026,13 @@ function drawIdle() {
 }
 function drawGrid(B) {
   const minor = S.scale > 6 ? 10 : (S.scale > 1.5 ? 50 : 100);
-  gridPass(B, minor, "rgba(154,167,180,0.055)");
-  gridPass(B, minor * 5, "rgba(154,167,180,0.11)");
+  if (!S.sat.on) gridPass(B, minor, "rgba(154,167,180,0.055)");
+  gridPass(B, minor * 5, S.sat.on ? "rgba(255,255,255,0.07)" : "rgba(154,167,180,0.11)");
 }
 function gridPass(B, step, color) {
   const r = viewRadius();
-  const x0 = Math.floor((S.pos.x - r) / step) * step, x1 = S.pos.x + r;
-  const y0 = Math.floor((S.pos.y - r) / step) * step, y1 = S.pos.y + r;
+  const x0 = Math.floor((B.c.x - r) / step) * step, x1 = B.c.x + r;
+  const y0 = Math.floor((B.c.y - r) / step) * step, y1 = B.c.y + r;
   ctx.strokeStyle = color; ctx.lineWidth = 1;
   ctx.beginPath();
   for (let x = x0; x <= x1; x += step) { const p1 = w2s(x, y0, B), p2 = w2s(x, y1, B); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
@@ -920,7 +1063,7 @@ function drawCoverage(B) {
   ctx.beginPath();
   for (let i = 0; i < S.cov.length; i++) {
     const s = S.cov[i];
-    if (Math.abs(s.x1 - S.pos.x) > r + S.width && Math.abs(s.y1 - S.pos.y) > r + S.width) continue;
+    if (Math.abs(s.x1 - B.c.x) > r + S.width && Math.abs(s.y1 - B.c.y) > r + S.width) continue;
     const p1 = w2s(s.x1, s.y1, B), p2 = w2s(s.x2, s.y2, B);
     ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
   }
@@ -935,10 +1078,10 @@ function drawGuidance(B) {
   ux /= L; uy /= L;
   const lnx = -uy, lny = ux, w = S.width;
   const r = viewRadius();
-  const z = cross2(ux, uy, S.pos.x - a.x, S.pos.y - a.y);
+  const z = cross2(ux, uy, B.c.x - a.x, B.c.y - a.y);
   const nNow = Math.round(z / w);
   const range = Math.ceil(r / w) + 1;
-  const t0 = ux * (S.pos.x - a.x) + uy * (S.pos.y - a.y);
+  const t0 = ux * (B.c.x - a.x) + uy * (B.c.y - a.y);
   for (let n = nNow - range; n <= nNow + range; n++) {
     const cx0 = a.x + lnx * n * w, cy0 = a.y + lny * n * w;
     const p1 = w2s(cx0 + ux * (t0 - r * 1.5), cy0 + uy * (t0 - r * 1.5), B);
@@ -1397,10 +1540,45 @@ $("btnStartGps").onclick = () => { initAudio(); startGps(); };
 $("btnStartDemo").onclick = () => { initAudio(); startDemo(); };
 $("btnInfo").onclick = () => { $("infoBody").innerHTML = t("infoBody"); $("infoOverlay").classList.add("show"); };
 
-/* Contextual big button: AB set / finish boundary / finish curve / back to AB */
+/* ================= Draw-boundary mode ================= */
+function enterDraw() {
+  if (!S.pos) return;
+  S.draw = { on: true, pts: [] };
+  if (!S.sat.on) {
+    S.sat.on = true; store.set("satOn", true);
+    if (S.sat.alpha < 0.5) { S.sat.alpha = 0.8; store.set("satAlpha", 0.8); }
+  }
+  S.view.center = { ...viewCenterPt() };
+  $("btnCenter").classList.remove("hide");
+  updateSatUI(); updateAbBtn(); updateLightbar(); render();
+}
+function exitDraw() {
+  S.draw.on = false;
+  updateAbBtn(); updateLightbar(); render();
+}
+function finishDrawnBoundary() {
+  const pts = S.draw.pts;
+  if (pts.length === 0) { exitDraw(); return false; }
+  if (pts.length < 3) { setHint(t("hintDrawMore")); return false; }
+  S.bnd = { rec: false, pts: pts.slice(), closed: true, area: polyArea(pts) };
+  S.draw.on = false; S.dirty = true;
+  setHint(t("hintDrawDone") + (S.bnd.area / 10000).toFixed(2) + " ha", 4000);
+  updateAbBtn(); updateLightbar(); updateHud(); render();
+  return true;
+}
+
+/* Contextual big button: AB set / finish boundary / finish curve / draw / back to AB */
 function updateAbBtn() {
   const L = $("abLabel"), Su = $("abSub"), btn = $("btnAB");
   btn.classList.remove("armed");
+  if (S.draw.on) {
+    L.textContent = t("finishDraw"); Su.textContent = t("finishDrawSub"); btn.classList.add("armed");
+    $("workLabel").textContent = t("undo"); $("workSub").textContent = t("undoSub"); $("btnWork").disabled = false;
+    return;
+  }
+  $("workLabel").textContent = t("work");
+  $("workSub").textContent = S.work ? t("covOn") : t("covOff");
+  $("btnWork").disabled = !(S.abStage === 2 || S.curve.ready);
   if (S.bnd.rec) { L.textContent = t("finishBnd"); Su.textContent = t("finishBndSub"); btn.classList.add("armed"); return; }
   if (S.curve.rec) { L.textContent = t("finishCrv"); Su.textContent = t("finishCrvSub"); btn.classList.add("armed"); return; }
   if (S.gmode === "curve") { L.textContent = t("abMode"); Su.textContent = "curva → AB"; if (S.lang === "en") Su.textContent = "curve → AB"; return; }
@@ -1410,6 +1588,7 @@ function updateAbBtn() {
 }
 $("btnAB").onclick = () => {
   if (!S.pos) return;
+  if (S.draw.on) { finishDrawnBoundary(); return; }
   if (S.bnd.rec) { finishBoundary(); return; }
   if (S.curve.rec) { finishCurve(); return; }
   if (S.gmode === "curve") { S.gmode = "ab"; S.sim.lockN = null; S.guid = computeGuidance(); updateAbBtn(); updateLightbar(); render(); return; }
@@ -1425,6 +1604,7 @@ $("btnAB").onclick = () => {
 };
 
 $("btnWork").onclick = () => {
+  if (S.draw.on) { S.draw.pts.pop(); render(); return; }
   S.work = !S.work;
   S.lastCov = S.pos ? { ...S.pos } : null;
   $("btnWork").classList.toggle("workOn", S.work);
@@ -1497,6 +1677,77 @@ $("simSpeed").onclick = () => {
   $("simSpeed").textContent = S.sim.speeds[S.sim.speedIdx] + " km/h";
 };
 
+/* ================= Satellite layer UI ================= */
+function updateSatUI() {
+  $("btnSatToggle").textContent = S.sat.on ? t("on") : t("off");
+  $("btnSatToggle").classList.toggle("on", S.sat.on);
+  $("satAlpha").value = Math.round(S.sat.alpha * 100);
+  $("spTitle").textContent = t("satLbl");
+}
+$("btnLayers").onclick = () => { $("satPop").classList.toggle("show"); updateSatUI(); };
+$("btnSatToggle").onclick = () => { S.sat.on = !S.sat.on; store.set("satOn", S.sat.on); updateSatUI(); render(); };
+$("satAlpha").oninput = () => { S.sat.alpha = clamp((+$("satAlpha").value) / 100, 0.1, 1); store.set("satAlpha", S.sat.alpha); if (S.sat.on) render(); };
+$("btnCenter").onclick = () => { S.view.center = null; $("btnCenter").classList.add("hide"); render(); };
+$("mDrawBnd").onclick = () => {
+  $("moreOverlay").classList.remove("show");
+  if (S.draw.on) exitDraw(); else enterDraw();
+};
+
+/* ================= Map gestures: pan / pinch / tap-to-draw ================= */
+const PTRS = new Map();
+let panState = null;
+canvas.addEventListener("pointerdown", e => {
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  $("satPop").classList.remove("show");
+  PTRS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (PTRS.size === 1) {
+    panState = { mode: "maybe", sx: e.clientX, sy: e.clientY, startCenter: S.pos ? { ...viewCenterPt() } : null, B: S.pos ? basis() : null };
+  } else if (PTRS.size === 2) {
+    const [p1, p2] = [...PTRS.values()];
+    panState = { mode: "pinch", startDist: hyp(p1.x - p2.x, p1.y - p2.y), startScale: S.scale };
+  }
+});
+canvas.addEventListener("pointermove", e => {
+  if (!PTRS.has(e.pointerId) || !panState) return;
+  PTRS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (panState.mode === "pinch") {
+    if (PTRS.size >= 2) {
+      const [p1, p2] = [...PTRS.values()];
+      const d = hyp(p1.x - p2.x, p1.y - p2.y);
+      if (panState.startDist > 10) { S.scale = clamp(panState.startScale * d / panState.startDist, 0.4, 24); render(); }
+    }
+    return;
+  }
+  const dx = e.clientX - panState.sx, dy = e.clientY - panState.sy;
+  if (panState.mode === "maybe" && hyp(dx, dy) > 9) panState.mode = "pan";
+  if (panState.mode === "pan" && panState.startCenter && panState.B) {
+    const kx = dx / S.scale, ky = dy / S.scale;
+    S.view.center = {
+      x: panState.startCenter.x - panState.B.right.x * kx + panState.B.up.x * ky,
+      y: panState.startCenter.y - panState.B.right.y * kx + panState.B.up.y * ky
+    };
+    $("btnCenter").classList.remove("hide");
+    render();
+  }
+});
+function ptrEnd(e) {
+  const wasTap = panState && panState.mode === "maybe";
+  PTRS.delete(e.pointerId);
+  if (wasTap && e.type === "pointerup" && S.draw.on && S.pos) {
+    const rect = canvas.getBoundingClientRect();
+    const p = s2w(e.clientX - rect.left, e.clientY - rect.top, basis());
+    S.draw.pts.push(p);
+    render();
+  }
+  if (PTRS.size === 0) panState = null;
+  else if (PTRS.size === 1) {
+    const [p1] = [...PTRS.values()];
+    panState = { mode: "pan", sx: p1.x, sy: p1.y, startCenter: S.pos ? { ...viewCenterPt() } : null, B: S.pos ? basis() : null };
+  }
+}
+canvas.addEventListener("pointerup", ptrEnd);
+canvas.addEventListener("pointercancel", ptrEnd);
+
 /* ================= Language ================= */
 function applyLang() {
   document.documentElement.lang = S.lang;
@@ -1508,7 +1759,7 @@ function applyLang() {
   $("simAuto").textContent = t("autoLbl");
   if (!bootDone) { $("bootStat").textContent = t("bootWarn"); }
   else { $("bootStat").textContent = t("bootOk"); }
-  buildOpGrid(); updateWidthUI(); updateRateUI(); updateAbBtn(); updateLightbar(); updateHud();
+  buildOpGrid(); updateWidthUI(); updateRateUI(); updateSatUI(); updateAbBtn(); updateLightbar(); updateHud();
 }
 $("langEn").onclick = () => { S.lang = "en"; store.set("lang", "en"); applyLang(); };
 $("langEs").onclick = () => { S.lang = "es"; store.set("lang", "es"); applyLang(); };
@@ -1522,7 +1773,7 @@ try {
 
 /* ================= Boot ================= */
 let bootDone = false;
-window.__test = { S, computeGuidance, onPosition, startDemo, passLabel, finishBoundary, finishCurve, buildKML, serializeField, applyField, polyArea, rayPolyDist, pointInPoly, t };
+window.__test = { S, computeGuidance, onPosition, startDemo, passLabel, finishBoundary, finishCurve, buildKML, serializeField, applyField, polyArea, rayPolyDist, pointInPoly, t, enterDraw, finishDrawnBoundary, basis, s2w, tileCache };
 buildOpGrid();
 updateWidthUI();
 updateRateUI();
