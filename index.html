@@ -97,6 +97,12 @@
   }
   #satPop.show { display: flex; }
   #satPop .spTitle { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .srcRow { display: flex; gap: 6px; }
+  .srcBtn {
+    flex: 1; border: 1px solid var(--line2); background: var(--panel2); color: var(--dim);
+    border-radius: 9px; padding: 8px 4px; font-size: 12px; font-weight: 800;
+  }
+  .srcBtn.sel { border-color: rgba(232,163,61,.6); color: var(--amber); }
   #btnSatToggle {
     border: 1px solid var(--line2); background: var(--panel2); color: var(--text);
     border-radius: 11px; padding: 10px; font-size: 14px; font-weight: 800;
@@ -303,6 +309,11 @@
   <div id="satPop">
     <div class="spTitle" id="spTitle">SATELLITE</div>
     <button id="btnSatToggle">OFF</button>
+    <div class="srcRow">
+      <button class="srcBtn" id="srcEsri">Esri</button>
+      <button class="srcBtn" id="srcGoogle">Google</button>
+      <button class="srcBtn" id="srcCustom">URL</button>
+    </div>
     <input type="range" id="satAlpha" min="15" max="100" value="55">
   </div>
   <div class="chipCol" id="zoomCol">
@@ -362,7 +373,7 @@
     </div>
     <div class="note" id="gpsNote" data-i18n="gpsNote"><b>Phone GPS is ~3&#8211;5 m accurate.</b> Good for spreading, spraying and tillage passes. For planting-grade (2&#8211;30 cm), pair an external RTK receiver later &#8212; the guidance logic here stays the same.</div>
     <div class="linkRow"><button id="btnInfo" data-i18n="btnInfoLbl">How to use &amp; accuracy guide</button></div>
-    <div class="ver">v2.2 &middot; <span id="verNote">offline-ready</span></div>
+    <div class="ver">v2.3 &middot; <span id="verNote">offline-ready</span></div>
   </div>
 </div>
 
@@ -497,6 +508,8 @@ const I18N = {
     demoName: "Demo field", fieldDefault: "Field", namePrompt: "Field name:",
     autoLbl: "AUTO‑STEER",
     mDrawBnd: "Draw boundary", satLbl: "SATELLITE", on: "ON", off: "OFF",
+    gKeyPrompt: "Google Maps API key (enable 'Map Tiles API' in Google Cloud, free credit covers personal use):",
+    tplPrompt: "Tile URL template containing {z}/{x}/{y}:",
     undo: "UNDO", undoSub: "remove point", finishDraw: "FINISH", finishDrawSub: "close outline",
     hintDraw: "Tap the corners of the field — pan with one finger",
     hintDrawMore: "Need at least 3 points", hintDrawDone: "Boundary drawn: ",
@@ -552,6 +565,8 @@ const I18N = {
     demoName: "Lote demo", fieldDefault: "Lote", namePrompt: "Nombre del lote:",
     autoLbl: "PILOTO AUTO",
     mDrawBnd: "Dibujar perímetro", satLbl: "SATÉLITE", on: "SÍ", off: "NO",
+    gKeyPrompt: "Clave API de Google Maps (activá 'Map Tiles API' en Google Cloud; el crédito gratis alcanza para uso personal):",
+    tplPrompt: "Plantilla de URL de teselas con {z}/{x}/{y}:",
     undo: "DESHACER", undoSub: "quitar punto", finishDraw: "CERRAR", finishDrawSub: "cerrar contorno",
     hintDraw: "Tocá las esquinas del lote — arrastrá para mover el mapa",
     hintDrawMore: "Mínimo 3 puntos", hintDrawDone: "Perímetro dibujado: ",
@@ -911,21 +926,83 @@ function s2w(sx, sy, B) {
 function viewRadius() { return hyp(CW, CH) / 2 / S.scale + 10; }
 
 /* ================= Satellite tiles ================= */
-const TILE_URL = (z, x, y) => "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + y + "/" + x;
+let satZCap = 18;          // learned max zoom with real data (Esri serves gray placeholders past it)
+let gFetching = false;
+function satSrc() { return store.get("satSrc", "esri"); }
+function srcMaxZ() { const s = satSrc(); return s === "google" ? 20 : Math.min(18, satZCap); }
+function tileURL(z, x, y) {
+  const s = satSrc();
+  if (s === "google") {
+    const ses = store.get("gSession", null);
+    const key = store.get("gKey", "");
+    if (!ses || !key) return null;
+    return "https://tile.googleapis.com/v1/2dtiles/" + z + "/" + x + "/" + y + "?session=" + encodeURIComponent(ses.token) + "&key=" + encodeURIComponent(key);
+  }
+  if (s === "custom") {
+    const tpl = store.get("satTpl", "");
+    if (!tpl) return null;
+    return tpl.replace("{z}", z).replace("{x}", x).replace("{y}", y);
+  }
+  return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + y + "/" + x;
+}
+async function ensureGoogleSession() {
+  const key = store.get("gKey", "");
+  if (!key || gFetching) return;
+  const ses = store.get("gSession", null);
+  if (ses && ses.ts && Date.now() - ses.ts < 12 * 86400e3) return;
+  gFetching = true;
+  try {
+    const r = await fetch("https://tile.googleapis.com/v1/createSession?key=" + encodeURIComponent(key), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mapType: "satellite", language: "en-US", region: "BO" })
+    });
+    const j = await r.json();
+    if (j.session) { store.set("gSession", { token: j.session, ts: Date.now() }); render(); }
+    else setHint("Google: " + ((j.error && j.error.message) || "no session"), 4000);
+  } catch (e) { setHint("Google tiles unreachable", 3500); }
+  gFetching = false;
+}
 const tileCache = new Map();
+const detC = document.createElement("canvas"); detC.width = 16; detC.height = 16;
+const detX = detC.getContext("2d", { willReadFrequently: true });
+function tileLooksEmpty(img) {
+  // Esri returns a flat gray "Map data not yet available" tile past its real max zoom
+  try {
+    detX.drawImage(img, 0, 0, 16, 16);
+    const d = detX.getImageData(0, 0, 16, 16).data;
+    let mn = 255, mx = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const l = (d[i] * 3 + d[i + 1] * 6 + d[i + 2]) / 10;
+      if (l < mn) mn = l; if (l > mx) mx = l;
+    }
+    return mx - mn < 26;
+  } catch (e) { return false; }
+}
 function tileNW(z, x, y) {
   const n = Math.pow(2, z);
   return { lat: Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * R2D, lon: x / n * 360 - 180 };
 }
 function getTile(z, x, y) {
-  const key = z + "/" + x + "/" + y;
+  const url = tileURL(z, x, y);
+  if (!url) return { ok: false, err: true };
+  const key = satSrc() + ":" + z + "/" + x + "/" + y;
   let tc = tileCache.get(key);
   if (!tc) {
-    tc = { img: new Image(), ok: false, err: false };
+    tc = { img: new Image(), ok: false, err: false, empty: false, z };
     tc.img.crossOrigin = "anonymous";
-    tc.img.onload = () => { tc.ok = true; render(); };
-    tc.img.onerror = () => { tc.err = true; };
-    tc.img.src = TILE_URL(z, x, y);
+    tc.img.onload = () => {
+      tc.ok = true;
+      if (satSrc() === "esri" && z > 13 && tileLooksEmpty(tc.img)) {
+        tc.empty = true;
+        if (z <= satZCap) { satZCap = z - 1; }
+      }
+      render();
+    };
+    tc.img.onerror = () => {
+      tc.err = true;
+      if (satSrc() !== "esri" && z > 13 && z <= satZCap) satZCap = z - 1;
+    };
+    tc.img.src = url;
     tileCache.set(key, tc);
     if (tileCache.size > 220) {
       const drop = tileCache.size - 180;
@@ -935,12 +1012,36 @@ function getTile(z, x, y) {
   }
   return tc;
 }
+function drawTileOrAncestor(z, tx, ty, pNW, pSE) {
+  const tc = getTile(z, tx, ty);
+  const w = pSE.x - pNW.x, h = pNW.y - pSE.y;
+  if (tc.ok && !tc.empty) {
+    ctx.save(); ctx.translate(pNW.x, pNW.y); ctx.scale(1, -1);
+    ctx.drawImage(tc.img, 0, 0, w, h);
+    ctx.restore();
+    return true;
+  }
+  for (let dz = 1; dz <= 4 && z - dz >= 3; dz++) {
+    const pz = z - dz, px = tx >> dz, py = ty >> dz;
+    const anc = getTile(pz, px, py);
+    if (anc.ok && !anc.empty) {
+      const sub = 256 / Math.pow(2, dz);
+      const ox = (tx - (px << dz)) * sub, oy = (ty - (py << dz)) * sub;
+      ctx.save(); ctx.translate(pNW.x, pNW.y); ctx.scale(1, -1);
+      ctx.drawImage(anc.img, ox, oy, sub, sub, 0, 0, w, h);
+      ctx.restore();
+      return true;
+    }
+  }
+  return false;
+}
 function drawSatellite(B) {
   if (!S.sat.on || !S.origin) return;
+  if (satSrc() === "google") ensureGoogleSession();
   const c = B.c;
   const ll0 = xyToLL(c.x, c.y);
   const coslat = Math.cos(ll0.lat * D2R);
-  let z = clamp(Math.round(Math.log2(156543.03392 * coslat * S.scale)) + 1, 3, 18);
+  let z = clamp(Math.round(Math.log2(156543.03392 * coslat * S.scale)) + 1, 3, srcMaxZ());
   const r = viewRadius();
   let txMin, txMax, tyMin, tyMax;
   for (;;) {
@@ -963,15 +1064,9 @@ function drawSatellite(B) {
   ctx.globalAlpha = S.sat.alpha;
   for (let tx = txMin; tx <= txMax; tx++) {
     for (let ty = tyMin; ty <= tyMax; ty++) {
-      const tc = getTile(z, tx, ty);
-      if (!tc.ok) continue;
       const nw = tileNW(z, tx, ty), se = tileNW(z, tx + 1, ty + 1);
       const pNW = llToXY(nw.lat, nw.lon), pSE = llToXY(se.lat, se.lon);
-      ctx.save();
-      ctx.translate(pNW.x, pNW.y);
-      ctx.scale(1, -1);
-      ctx.drawImage(tc.img, 0, 0, pSE.x - pNW.x, pNW.y - pSE.y);
-      ctx.restore();
+      drawTileOrAncestor(z, tx, ty, pNW, pSE);
     }
   }
   ctx.restore();
@@ -1683,7 +1778,33 @@ function updateSatUI() {
   $("btnSatToggle").classList.toggle("on", S.sat.on);
   $("satAlpha").value = Math.round(S.sat.alpha * 100);
   $("spTitle").textContent = t("satLbl");
+  const s = satSrc();
+  $("srcEsri").classList.toggle("sel", s === "esri");
+  $("srcGoogle").classList.toggle("sel", s === "google");
+  $("srcCustom").classList.toggle("sel", s === "custom");
+  $("attr").innerHTML = s === "google" ? "&copy; Google" : (s === "custom" ? "&copy; tile provider" : "&copy; Esri &middot; Maxar &middot; Earthstar Geographics");
 }
+function setSatSrc(s) {
+  if (s === "google" && !store.get("gKey", "")) {
+    let k = null;
+    try { k = window.prompt(t("gKeyPrompt"), ""); } catch (e) {}
+    if (!k || !k.trim()) { updateSatUI(); return; }
+    store.set("gKey", k.trim()); store.set("gSession", null);
+  }
+  if (s === "custom" && !store.get("satTpl", "")) {
+    let tp = null;
+    try { tp = window.prompt(t("tplPrompt"), "https://example.com/{z}/{x}/{y}.png"); } catch (e) {}
+    if (!tp || tp.indexOf("{z}") < 0) { updateSatUI(); return; }
+    store.set("satTpl", tp.trim());
+  }
+  store.set("satSrc", s);
+  tileCache.clear(); satZCap = 18;
+  if (!S.sat.on) { S.sat.on = true; store.set("satOn", true); }
+  updateSatUI(); render();
+}
+$("srcEsri").onclick = () => setSatSrc("esri");
+$("srcGoogle").onclick = () => setSatSrc("google");
+$("srcCustom").onclick = () => setSatSrc("custom");
 $("btnLayers").onclick = () => { $("satPop").classList.toggle("show"); updateSatUI(); };
 $("btnSatToggle").onclick = () => { S.sat.on = !S.sat.on; store.set("satOn", S.sat.on); updateSatUI(); render(); };
 $("satAlpha").oninput = () => { S.sat.alpha = clamp((+$("satAlpha").value) / 100, 0.1, 1); store.set("satAlpha", S.sat.alpha); if (S.sat.on) render(); };
@@ -1773,7 +1894,7 @@ try {
 
 /* ================= Boot ================= */
 let bootDone = false;
-window.__test = { S, computeGuidance, onPosition, startDemo, passLabel, finishBoundary, finishCurve, buildKML, serializeField, applyField, polyArea, rayPolyDist, pointInPoly, t, enterDraw, finishDrawnBoundary, basis, s2w, tileCache };
+window.__test = { S, computeGuidance, onPosition, startDemo, passLabel, finishBoundary, finishCurve, buildKML, serializeField, applyField, polyArea, rayPolyDist, pointInPoly, t, enterDraw, finishDrawnBoundary, basis, s2w, tileCache, getSatZCap: () => satZCap };
 buildOpGrid();
 updateWidthUI();
 updateRateUI();
