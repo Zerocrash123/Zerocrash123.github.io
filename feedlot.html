@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<meta name="robots" content="noindex, nofollow">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Feedlot Designer — Río Grande</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: rgba(17, 22, 30, 0.94);
+    --panel-solid: #11161e;
+    --panel2: #1a212c;
+    --line: rgba(255, 255, 255, 0.07);
+    --line2: rgba(255, 255, 255, 0.12);
+    --text: #f2f6fa;
+    --dim: #9aa7b4;
+    --muted: #7c8894;
+    --green: #43c463;
+    --green-hi: #2ea04e;
+    --amber: #e8a33d;
+    --red: #f2555a;
+    --blue: #5ca8ff;
+    --ease: cubic-bezier(.32, .72, .3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  }
+  button { font-family: inherit; cursor: pointer; transition: transform .1s var(--ease), background .15s, border-color .15s, opacity .15s; }
+  button:active { transform: scale(.96); }
+
+  /* ---------- Header ---------- */
+  #hdr {
+    flex: none; display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; background: linear-gradient(180deg, #131a24, #0e141d);
+    border-bottom: 1px solid var(--line); z-index: 30;
+  }
+  #hdr .brand { font-weight: 800; font-size: 14px; letter-spacing: .02em; white-space: nowrap; }
+  #hdr .brand small { display: block; font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; }
+  #hdr .sp { flex: 1; }
+  .hBtn {
+    background: var(--panel2); border: 1px solid var(--line2); color: var(--text);
+    border-radius: 10px; padding: 7px 11px; font-size: 12.5px; font-weight: 700;
+  }
+  .hBtn.on { background: var(--green-hi); border-color: var(--green-hi); }
+
+  /* ---------- Layout ---------- */
+  #wrap { flex: 1; display: flex; min-height: 0; position: relative; }
+  #stage { flex: 1; position: relative; min-width: 0; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  /* ---------- Panels (sidebar on desktop, sheets on mobile) ---------- */
+  .panel {
+    background: var(--panel-solid); border-right: 1px solid var(--line);
+    width: 252px; flex: none; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 10px 12px 24px; z-index: 40;
+  }
+  #props { border-right: 0; border-left: 1px solid var(--line); display: none; }
+  #props.has { display: block; }
+  .panel h2 {
+    font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin: 14px 0 7px; border-bottom: 1px solid var(--line); padding-bottom: 4px;
+  }
+  .panel h2:first-child { margin-top: 2px; }
+  .bGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .bGrid.one { grid-template-columns: 1fr; }
+  .pBtn {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 10px; padding: 8px 6px; font-size: 11.5px; font-weight: 700; text-align: center;
+    line-height: 1.25; min-height: 40px;
+  }
+  .pBtn .em { display: block; font-size: 15px; margin-bottom: 2px; }
+  .pBtn.on { background: var(--green-hi); border-color: var(--green-hi); }
+  .rowBtns { display: flex; gap: 5px; }
+  .rowBtns .pBtn { flex: 1; min-height: 32px; padding: 6px 4px; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--dim); margin-top: 8px; }
+  .chk input { width: 17px; height: 17px; accent-color: var(--green); }
+  #terrInfo { font-size: 12px; color: var(--dim); font-weight: 600; margin-bottom: 6px; }
+
+  /* Field element list */
+  #fieldList { display: flex; flex-direction: column; gap: 4px; }
+  .fRow {
+    display: flex; align-items: center; gap: 8px; background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 9px; padding: 6px 9px; font-size: 12px;
+    font-weight: 600; color: var(--text); text-align: left; width: 100%;
+  }
+  .fRow.sel { border-color: var(--amber); }
+  .fRow small { color: var(--muted); font-weight: 600; margin-left: auto; white-space: nowrap; }
+  #fEmpty { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+  /* ---------- Props panel ---------- */
+  #props .pTitle { font-size: 15px; font-weight: 800; margin-bottom: 2px; display: flex; align-items: center; gap: 7px; }
+  #props .pSub { font-size: 11px; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+  .fld { margin-bottom: 10px; }
+  .fld label { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .fld input[type=text], .fld input[type=number] {
+    width: 100%; background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;
+    color: var(--text); font-size: 15px; font-weight: 700; padding: 8px 10px; font-family: inherit;
+    -webkit-user-select: text; user-select: text;
+  }
+  .fld input[type=range] { width: 100%; accent-color: var(--green); height: 28px; }
+  #calcBox {
+    background: rgba(67,196,99,.08); border: 1px solid rgba(67,196,99,.25); border-radius: 10px;
+    padding: 8px 10px; font-size: 12.5px; font-weight: 700; color: var(--green); line-height: 1.6; margin-bottom: 10px;
+  }
+  .aBtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+  .aBtn { background: var(--panel2); border: 1px solid var(--line2); border-radius: 10px; color: var(--text); padding: 9px 4px; font-size: 12px; font-weight: 700; }
+  .aBtn.danger { color: var(--red); border-color: rgba(242,85,90,.4); grid-column: span 2; }
+
+  /* ---------- Overlays on canvas ---------- */
+  #chip {
+    position: absolute; top: 10px; left: 10px; z-index: 20;
+    background: var(--panel); border: 1px solid var(--line2); border-radius: 11px;
+    padding: 7px 11px; font-size: 12px; font-weight: 700; pointer-events: none;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); line-height: 1.5;
+  }
+  #chip b { color: var(--green); }
+  #hint {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 20;
+    background: rgba(10,14,20,.7); border-radius: 9px; padding: 5px 12px;
+    font-size: 10.5px; font-weight: 600; color: var(--dim); white-space: nowrap;
+    max-width: 94%; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+  }
+  #fabAdd, #fabSheet { display: none; }
+
+  /* ---------- Modals ---------- */
+  .ov {
+    position: fixed; inset: 0; background: rgba(4,7,11,.62); z-index: 90;
+    display: none; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .ov.show { display: flex; }
+  .ov .card {
+    background: var(--panel-solid); border: 1px solid var(--line2);
+    border-radius: 18px 18px 0 0; width: 100%; max-width: 520px; max-height: 82vh;
+    overflow-y: auto; padding: 18px 18px calc(20px + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 720px) { .ov { align-items: center; } .ov .card { border-radius: 18px; } }
+  .card h1 { font-size: 17px; font-weight: 800; margin-bottom: 12px; }
+  .card .closeX { float: right; background: var(--panel2); border: 1px solid var(--line2); color: var(--dim); width: 30px; height: 30px; border-radius: 9px; font-size: 14px; }
+  .mList { display: flex; flex-direction: column; gap: 7px; clear: both; }
+  .mList button { background: var(--panel2); border: 1px solid var(--line); border-radius: 11px; color: var(--text); font-size: 13.5px; font-weight: 700; padding: 12px; text-align: left; }
+  .mList button.danger { color: var(--red); }
+  table.sum { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.sum th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 5px 4px; border-bottom: 1px solid var(--line2); }
+  table.sum td { padding: 6px 4px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  table.sum td:nth-child(2), table.sum td:nth-child(3), table.sum th:nth-child(2), table.sum th:nth-child(3) { text-align: right; }
+  .bigStats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 14px; }
+  .bigStats .bs { background: var(--panel2); border: 1px solid var(--line); border-radius: 11px; padding: 9px 11px; }
+  .bigStats .bv { font-size: 19px; font-weight: 800; color: var(--green); }
+  .bigStats .bl { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
+  #err {
+    position: fixed; inset: 0; z-index: 200; background: var(--bg); color: var(--amber);
+    display: none; align-items: center; justify-content: center; text-align: center;
+    padding: 30px; font-size: 14px; font-weight: 700; line-height: 1.6;
+  }
+
+  /* ---------- Mobile: panels become sheets ---------- */
+  @media (max-width: 919px) {
+    .panel {
+      position: fixed; left: 0; right: 0; bottom: 0; width: auto; max-height: 62vh;
+      border: 1px solid var(--line2); border-bottom: 0; border-radius: 18px 18px 0 0;
+      transform: translateY(105%); transition: transform .28s var(--ease); z-index: 60;
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      box-shadow: 0 -10px 34px rgba(0,0,0,.5);
+    }
+    .panel.open { transform: translateY(0); }
+    #props.has { display: block; }
+    #fabAdd {
+      display: flex; position: absolute; left: 12px; bottom: 40px; z-index: 25;
+      background: var(--green-hi); color: #fff; border: 0; border-radius: 14px;
+      padding: 12px 16px; font-size: 14px; font-weight: 800; align-items: center; gap: 6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.4);
+    }
+    #hint { bottom: 8px; }
+    .panel .sheetClose {
+      display: block; position: sticky; top: 0; float: right;
+      background: var(--panel2); border: 1px solid var(--line2); color: var(--dim);
+      width: 30px; height: 30px; border-radius: 9px; font-size: 14px; z-index: 5;
+    }
+  }
+  @media (min-width: 920px) { .panel .sheetClose { display: none; } }
+</style>
+</head>
+<body>
+
+<div id="err"></div>
+
+<div id="hdr">
+  <div class="brand">Feedlot Designer<small>Estancia Río Grande</small></div>
+  <div class="sp"></div>
+  <button class="hBtn" id="btnView">2D</button>
+  <button class="hBtn" id="btnLang">ES</button>
+  <button class="hBtn" id="btnMenu">&#8942;</button>
+</div>
+
+<div id="wrap">
+
+  <!-- ===== Palette ===== -->
+  <aside class="panel" id="side">
+    <button class="sheetClose" data-close="side">&#10005;</button>
+    <h2 data-i="nav">NAVEGACIÓN</h2>
+    <div class="rowBtns">
+      <button class="pBtn" id="nOrbit">3D</button>
+      <button class="pBtn" id="nTop" data-i="top">Aérea</button>
+      <button class="pBtn" id="nCenter" data-i="center">Centrar</button>
+    </div>
+    <h2 data-i="grid">GRILLA</h2>
+    <div class="rowBtns" id="gridBtns">
+      <button class="pBtn" data-g="5">5m</button>
+      <button class="pBtn on" data-g="10">10m</button>
+      <button class="pBtn" data-g="25">25m</button>
+      <button class="pBtn" data-g="0" data-i="gOff">Sin</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="ckSnap" checked><span data-i="snap">Imán 1 m</span></label>
+    <h2 data-i="terr">TERRENO</h2>
+    <div id="terrInfo">500 × 500 m</div>
+    <div class="bGrid one"><button class="pBtn" id="btnTerr" data-i="terrBtn">Definir terreno…</button></div>
+    <h2 data-i="addEl">AGREGAR ELEMENTOS</h2>
+    <div class="bGrid" id="padd"></div>
+    <h2 data-i="nat">ELEMENTOS NATURALES</h2>
+    <div class="bGrid" id="pnat"></div>
+    <h2 data-i="forr">FORRAJES</h2>
+    <div class="bGrid" id="pforr"></div>
+    <h2 data-i="inField">ELEMENTOS EN CAMPO</h2>
+    <div id="fieldList"></div>
+    <div id="fEmpty" data-i="empty">Todavía no hay elementos. Tocá un botón de arriba para agregar.</div>
+  </aside>
+
+  <!-- ===== Stage ===== -->
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="chip">—</div>
+    <div id="hint">—</div>
+    <button id="fabAdd">＋ <span data-i="add">Agregar</span></button>
+  </main>
+
+  <!-- ===== Properties ===== -->
+  <aside class="panel" id="props">
+    <button class="sheetClose" data-close="props">&#10005;</button>
+    <div class="pTitle"><span id="prEmoji"></span><span id="prType"></span></div>
+    <div class="pSub" id="prSub"></div>
+    <div class="fld"><label data-i="propName">Nombre</label><input type="text" id="prName" maxlength="30" autocomplete="off"></div>
+    <div class="fld" id="fldW"><label id="lblW"></label><input type="number" id="prW" min="1" max="800" step="1" inputmode="decimal"></div>
+    <div class="fld" id="fldD"><label id="lblD"></label><input type="number" id="prD" min="1" max="800" step="1" inputmode="decimal"></div>
+    <div class="fld" id="fldN"><label data-i="cant">Cantidad</label><input type="number" id="prN" min="1" max="200" step="1" inputmode="numeric"></div>
+    <div class="fld"><label><span data-i="rot">Rotación</span> — <span id="rotVal">0°</span></label><input type="range" id="prR" min="0" max="359" step="1" value="0"></div>
+    <div id="calcBox"></div>
+    <div class="aBtns">
+      <button class="aBtn" id="prDup" data-i="dup">Duplicar</button>
+      <button class="aBtn" id="prR90" data-i="rot90">Rotar 90°</button>
+      <button class="aBtn danger" id="prDel" data-i="del">Eliminar</button>
+    </div>
+  </aside>
+</div>
+
+<!-- ===== Menu ===== -->
+<div class="ov" id="menuOv"><div class="card">
+  <button class="closeX" data-ov="menuOv">&#10005;</button>
+  <h1 data-i="menu">Menú</h1>
+  <div class="mList">
+    <button id="mSum" data-i="mSum">Resumen del diseño</button>
+    <button id="mPng" data-i="mPng">Guardar imagen (PNG)</button>
+    <button id="mJson" data-i="mJson">Exportar diseño (JSON)</button>
+    <button id="mImp" data-i="mImp">Importar diseño</button>
+    <button id="mSet" data-i="mSet">Ajustes</button>
+    <button id="mClear" class="danger" data-i="mClear">Borrar todo</button>
+    <button id="mBack" data-i="mBack">← Río Grande Guidance</button>
+  </div>
+</div></div>
+
+<!-- ===== Summary ===== -->
+<div class="ov" id="sumOv"><div class="card">
+  <button class="closeX" data-ov="sumOv">&#10005;</button>
+  <h1 data-i="sumTitle">Resumen del diseño</h1>
+  <div class="bigStats" id="sumBig"></div>
+  <table class="sum">
+    <thead><tr><th data-i="sType">Elemento</th><th data-i="sCount">Cant.</th><th>m²</th></tr></thead>
+    <tbody id="sumBody"></tbody>
+  </table>
+</div></div>
+
+<!-- ===== Settings ===== -->
+<div class="ov" id="setOv"><div class="card">
+  <button class="closeX" data-ov="setOv">&#10005;</button>
+  <h1 data-i="set">Ajustes</h1>
+  <div class="fld"><label data-i="sM2">m² por cabeza (corral)</label><input type="number" id="stM2" min="5" max="100" step="1"></div>
+  <div class="fld"><label data-i="sTw">Terreno – ancho (m)</label><input type="number" id="stTw" min="100" max="3000" step="50"></div>
+  <div class="fld"><label data-i="sTd">Terreno – fondo (m)</label><input type="number" id="stTd" min="100" max="3000" step="50"></div>
+  <label class="chk"><input type="checkbox" id="stLab"><span data-i="sLab">Etiquetas</span></label>
+  <label class="chk"><input type="checkbox" id="stShad"><span data-i="sShad">Sombras</span></label>
+  <div class="mList" style="margin-top:14px"><button id="stApply" data-i="apply">Aplicar</button></div>
+</div></div>
+
+<input type="file" id="impFile" accept=".json,application/json" style="display:none">
+
+<script src="three.min.js"></script>
+<script>
+"use strict";
+(function () {
+
+if (typeof THREE === "undefined") {
+  var e = document.getElementById("err");
+  e.style.display = "flex";
+  e.textContent = "No se pudo cargar el motor 3D (three.min.js). Revisá la conexión y recargá. / Could not load the 3D engine — reload with a connection.";
+  return;
+}
+
+/* ================= Utilities ================= */
+const $ = id => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const D2R = Math.PI / 180;
+
+const store = (() => {
+  let mem = {}, ok = false;
+  try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); ok = true; } catch (e) {}
+  return {
+    get(k, d) { try { const v = ok ? localStorage.getItem(k) : mem[k]; return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { const s = JSON.stringify(v); if (ok) localStorage.setItem(k, s); else mem[k] = s; } catch (e) {} }
+  };
+})();
+
+function seededRand(seed) {
+  let a = seed | 0 || 1;
+  return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+/* ================= i18n ================= */
+const I18N = {
+  es: {
+    nav: "NAVEGACIÓN", top: "Aérea", center: "Centrar", grid: "GRILLA", gOff: "Sin", snap: "Imán 1 m",
+    terr: "TERRENO", terrBtn: "Definir terreno…", addEl: "AGREGAR ELEMENTOS", nat: "ELEMENTOS NATURALES",
+    forr: "FORRAJES", inField: "ELEMENTOS EN CAMPO", add: "Agregar",
+    empty: "Todavía no hay elementos. Tocá un botón de arriba para agregar.",
+    corral: "Corral", calleja: "Calleja", embarque: "Embarque", bascula: "Báscula",
+    planta: "Planta de alimento", enfermeria: "Enfermería", oficina: "Oficina", tanque: "Tanque de agua",
+    techo: "Sombra (techo)", expansion: "Expansión futura", laguna: "Laguna efluentes",
+    arbol: "Árbol", arboleda: "Cortina forestal", silobolsa: "Silo bolsa", rollos: "Rollos",
+    propName: "Nombre", frente: "Frente (m)", fondo: "Fondo (m)", ancho: "Ancho (m)", largo: "Largo (m)",
+    diam: "Diámetro (m)", cant: "Cantidad", rot: "Rotación", dup: "Duplicar", del: "Eliminar", rot90: "Rotar 90°",
+    menu: "Menú", mPng: "Guardar imagen (PNG)", mJson: "Exportar diseño (JSON)", mImp: "Importar diseño",
+    mSum: "Resumen del diseño", mSet: "Ajustes", mClear: "Borrar todo", mBack: "← Río Grande Guidance",
+    sumTitle: "Resumen del diseño", sType: "Elemento", sCount: "Cant.",
+    stCap: "capacidad (cab.)", stCorr: "corrales", stBunk: "m de comedero", stUse: "% del terreno",
+    set: "Ajustes", sM2: "m² por cabeza (corral)", sTw: "Terreno – ancho (m)", sTd: "Terreno – fondo (m)",
+    sLab: "Etiquetas", sShad: "Sombras", apply: "Aplicar",
+    clearQ: "¿Borrar todos los elementos? Esta acción no se puede deshacer.",
+    impErr: "No se pudo importar el archivo.",
+    hd: "cab.", bunkPer: "cm/cab. de comedero", area: "Superficie", cap: "Capacidad",
+    hint: "Arrastrá: orbitar · Rueda: zoom · Click derecho: pan · Tocá y arrastrá un elemento para moverlo · R: rotar · Supr: eliminar",
+    hintTouch: "1 dedo: orbitar (o mover un elemento) · 2 dedos: zoom y pan · Tocá un elemento para seleccionarlo",
+    trees: "árboles", bales: "rollos"
+  },
+  en: {
+    nav: "NAVIGATION", top: "Top view", center: "Center", grid: "GRID", gOff: "Off", snap: "Snap 1 m",
+    terr: "TERRAIN", terrBtn: "Set terrain…", addEl: "ADD ELEMENTS", nat: "NATURAL ELEMENTS",
+    forr: "FORAGE", inField: "ELEMENTS ON SITE", add: "Add",
+    empty: "Nothing placed yet. Tap a button above to add elements.",
+    corral: "Pen", calleja: "Alley", embarque: "Load-out", bascula: "Truck scale",
+    planta: "Feed mill", enfermeria: "Hospital pen", oficina: "Office", tanque: "Water tank",
+    techo: "Shade roof", expansion: "Future expansion", laguna: "Runoff lagoon",
+    arbol: "Tree", arboleda: "Windbreak row", silobolsa: "Silage bag", rollos: "Hay bales",
+    propName: "Name", frente: "Frontage (m)", fondo: "Depth (m)", ancho: "Width (m)", largo: "Length (m)",
+    diam: "Diameter (m)", cant: "Count", rot: "Rotation", dup: "Duplicate", del: "Delete", rot90: "Rotate 90°",
+    menu: "Menu", mPng: "Save image (PNG)", mJson: "Export layout (JSON)", mImp: "Import layout",
+    mSum: "Layout summary", mSet: "Settings", mClear: "Clear all", mBack: "← Río Grande Guidance",
+    sumTitle: "Layout summary", sType: "Element", sCount: "Qty",
+    stCap: "capacity (head)", stCorr: "pens", stBunk: "m of feed bunk", stUse: "% of terrain",
+    set: "Settings", sM2: "m² per head (pen)", sTw: "Terrain – width (m)", sTd: "Terrain – depth (m)",
+    sLab: "Labels", sShad: "Shadows", apply: "Apply",
+    clearQ: "Delete every element? This cannot be undone.",
+    impErr: "Could not import that file.",
+    hd: "head", bunkPer: "cm/head bunk space", area: "Area", cap: "Capacity",
+    hint: "Drag: orbit · Wheel: zoom · Right-drag: pan · Drag an element to move it · R: rotate · Del: delete",
+    hintTouch: "1 finger: orbit (or move an element) · 2 fingers: zoom & pan · Tap an element to select it",
+    trees: "trees", bales: "bales"
+  }
+};
+function t(k) { return (I18N[state.lang] && I18N[state.lang][k]) || I18N.es[k] || k; }
+
+/* ================= Types ================= */
+const TYPES = {
+  corral:     { em: "🐂", cat: "padd", w: 60,  d: 60,  dl: { w: "frente", d: "fondo" }, lab: 1, ly: 5 },
+  calleja:    { em: "🛤️", cat: "padd", w: 4,   d: 120, dl: { w: "ancho",  d: "largo" }, lab: 0 },
+  embarque:   { em: "🚛", cat: "padd", w: 14,  d: 26,  dl: { w: "ancho",  d: "largo" }, lab: 1, ly: 6 },
+  bascula:    { em: "⚖️", cat: "padd", w: 4,   d: 20,  dl: { w: "ancho",  d: "largo" }, lab: 1, ly: 5 },
+  planta:     { em: "🏭", cat: "padd", w: 28,  d: 42,  dl: { w: "ancho",  d: "largo" }, lab: 1, ly: 12 },
+  enfermeria: { em: "🏥", cat: "padd", w: 20,  d: 28,  dl: { w: "ancho",  d: "largo" }, lab: 1, ly: 5 },
+  oficina:    { em: "🏠", cat: "padd", w: 8,   d: 12,  dl: { w: "ancho",  d: "largo" }, lab: 1, ly: 7 },
+  tanque:     { em: "🚰", cat: "padd", w: 10,            dl: { w: "diam" },              lab: 0 },
+  techo:      { em: "⛱️", cat: "padd", w: 10,  d: 30,  dl: { w: "ancho",  d: "largo" }, lab: 0 },
+  expansion:  { em: "📐", cat: "padd", w: 120, d: 120, dl: { w: "ancho",  d: "largo" }, lab: 1, ly: 4 },
+  laguna:     { em: "💧", cat: "pnat", w: 40,  d: 60,  dl: { w: "ancho",  d: "largo" }, lab: 1, ly: 4 },
+  arbol:      { em: "🌳", cat: "pnat", w: 6,             dl: { w: "diam" },              lab: 0 },
+  arboleda:   { em: "🌲", cat: "pnat", w: 6,   d: 60,  dl: { d: "largo" },              lab: 0 },
+  silobolsa:  { em: "🌽", cat: "pforr", d: 60,           dl: { d: "largo" },             lab: 0 },
+  rollos:     { em: "🌾", cat: "pforr", n: 12,           dl: {},                          lab: 0 }
+};
+const ORDER = ["corral", "calleja", "embarque", "bascula", "planta", "enfermeria", "oficina", "tanque", "techo", "expansion", "laguna", "arbol", "arboleda", "silobolsa", "rollos"];
+
+function footOf(it) {
+  switch (it.t) {
+    case "arbol": case "tanque": return { w: it.w, d: it.w };
+    case "silobolsa": return { w: 2.6, d: it.d };
+    case "rollos": { const c = Math.min(it.n, 8), r = Math.ceil(it.n / 8); return { w: c * 1.8 + 0.5, d: r * 2 + 0.5 }; }
+    default: return { w: it.w, d: it.d };
+  }
+}
+
+/* ================= State ================= */
+const LS = "feedlot_v1";
+let state = {
+  lang: (navigator.language || "es").slice(0, 2) === "en" ? "en" : "es",
+  grid: 10, snap: true, m2head: 20, labels: true, shadows: true,
+  terrain: { w: 500, d: 500 },
+  items: [], seq: {}
+};
+let selId = null;
+let saveTimer = null;
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => store.set(LS, state), 350); }
+
+/* ================= Three.js setup ================= */
+const canvas = $("cv");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xb9d2e4);
+scene.fog = new THREE.Fog(0xb9d2e4, 900, 3600);
+
+const camera = new THREE.PerspectiveCamera(52, 1, 2, 4200);
+camera.layers.enable(1);
+
+scene.add(new THREE.HemisphereLight(0xeaf3ff, 0xa89878, 0.85));
+const sun = new THREE.DirectionalLight(0xfff2dd, 0.95);
+sun.position.set(260, 340, 160);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+scene.add(sun);
+scene.add(sun.target);
+
+function fitSun() {
+  const r = Math.max(state.terrain.w, state.terrain.d) * 0.75 + 60;
+  const c = sun.shadow.camera;
+  c.left = -r; c.right = r; c.top = r; c.bottom = -r; c.near = 40; c.far = 1000;
+  c.updateProjectionMatrix();
+}
+
+/* Ground */
+const lamb = c => new THREE.MeshLambertMaterial({ color: c });
+const MAT = {
+  dirt: lamb(0xb5946a), dirtLight: lamb(0xc7ab7d), concrete: lamb(0xc2bcae), bunk: lamb(0xdcd5c1),
+  water: lamb(0x4a86b0), waterDark: lamb(0x2f5d7d), steel: lamb(0xaab3bb), steelDark: lamb(0x77828c),
+  wood: lamb(0x7d6547), roof: lamb(0xb3bac1), wall: lamb(0xe2dccb), green1: lamb(0x4c7a3d),
+  green2: lamb(0x5f9048), trunk: lamb(0x6e5638), hay: lamb(0xc9a55a), bag: lamb(0xeceada),
+  amber: lamb(0xe8a33d), pad: lamb(0xb89b6e)
+};
+const outerGround = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), lamb(0x74855c));
+outerGround.rotation.x = -Math.PI / 2; outerGround.position.y = -0.06; outerGround.receiveShadow = true;
+scene.add(outerGround);
+
+let terrainMesh = null, gridLines = null, borderLine = null;
+function buildTerrain() {
+  [terrainMesh, gridLines, borderLine].forEach(o => { if (o) { scene.remove(o); if (o.geometry) o.geometry.dispose(); } });
+  const { w, d } = state.terrain;
+  terrainMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), lamb(0x8b9c67));
+  terrainMesh.rotation.x = -Math.PI / 2; terrainMesh.receiveShadow = true;
+  scene.add(terrainMesh);
+  const bg = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-w / 2, 0.1, -d / 2), new THREE.Vector3(w / 2, 0.1, -d / 2),
+    new THREE.Vector3(w / 2, 0.1, d / 2), new THREE.Vector3(-w / 2, 0.1, d / 2)
+  ]);
+  borderLine = new THREE.LineLoop(bg, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
+  scene.add(borderLine);
+  buildGrid();
+  fitSun();
+  $("terrInfo").textContent = w + " × " + d + " m";
+}
+function buildGrid() {
+  if (gridLines) { scene.remove(gridLines); gridLines.geometry.dispose(); gridLines = null; }
+  const s = state.grid;
+  if (!s) return;
+  const { w, d } = state.terrain, pts = [];
+  for (let x = -w / 2; x <= w / 2 + 0.01; x += s) pts.push(x, 0.08, -d / 2, x, 0.08, d / 2);
+  for (let z = -d / 2; z <= d / 2 + 0.01; z += s) pts.push(-w / 2, 0.08, z, w / 2, 0.08, z);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+  gridLines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.13 }));
+  scene.add(gridLines);
+}
+
+const itemsRoot = new THREE.Group();
+scene.add(itemsRoot);
+
+/* ================= Camera controls ================= */
+const cam = { t: new THREE.Vector3(0, 0, 0), rho: 480, th: 0.65, ph: 0.92 };
+const camGoal = { ph: null };
+function applyCam() {
+  cam.ph = clamp(cam.ph, 0.06, 1.45);
+  cam.rho = clamp(cam.rho, 14, 2200);
+  const sp = Math.sin(cam.ph);
+  camera.position.set(
+    cam.t.x + cam.rho * sp * Math.sin(cam.th),
+    cam.rho * Math.cos(cam.ph),
+    cam.t.z + cam.rho * sp * Math.cos(cam.th)
+  );
+  camera.lookAt(cam.t.x, 0, cam.t.z);
+}
+function panCam(dx, dy) {
+  const s = cam.rho * 0.0016;
+  const fx = -Math.sin(cam.th), fz = -Math.cos(cam.th);
+  const rx = Math.cos(cam.th), rz = -Math.sin(cam.th);
+  cam.t.x += (-rx * dx + fx * dy) * s;
+  cam.t.z += (-rz * dx + fz * dy) * s;
+}
+
+/* ================= Mesh builders ================= */
+function box(w, h, d, mat, x, y, z) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m; }
+function cyl(rt, rb, h, mat, x, y, z, seg) { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 12), mat); m.position.set(x, y, z); return m; }
+function flat(w, d, mat, y, x, z) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
+  m.rotation.x = -Math.PI / 2; m.position.set(x || 0, y, z || 0); m.receiveShadow = true; return m;
+}
+function fenceRun(x1, z1, x2, z2) {
+  const g = new THREE.Group(), len = Math.hypot(x2 - x1, z2 - z1);
+  g.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
+  g.rotation.y = Math.atan2(-(z2 - z1), x2 - x1);
+  g.add(box(len, 0.055, 0.055, MAT.steelDark, 0, 0.62, 0));
+  g.add(box(len, 0.055, 0.055, MAT.steelDark, 0, 1.18, 0));
+  const n = Math.max(2, Math.round(len / 2.5) + 1);
+  const im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.085, 1.45, 7), MAT.wood, n);
+  const m4 = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) { m4.setPosition(-len / 2 + i * (len / (n - 1)), 0.72, 0); im.setMatrixAt(i, m4); }
+  g.add(im);
+  return g;
+}
+function fenceRect(w, d) {
+  const g = new THREE.Group();
+  g.add(fenceRun(-w / 2, -d / 2, w / 2, -d / 2));
+  g.add(fenceRun(-w / 2, d / 2, w / 2, d / 2));
+  g.add(fenceRun(-w / 2, -d / 2, -w / 2, d / 2));
+  g.add(fenceRun(w / 2, -d / 2, w / 2, d / 2));
+  return g;
+}
+function gableRoof(w, d, y, mat) {
+  const g = new THREE.Group(), a = 0.36, pw = w / 2 / Math.cos(a) + 0.5;
+  const l = box(pw, 0.14, d + 0.9, mat, 0, 0, 0); l.rotation.z = a; l.position.set(-w / 4, y + (w / 4) * Math.tan(a) / 2, 0);
+  const r = box(pw, 0.14, d + 0.9, mat, 0, 0, 0); r.rotation.z = -a; r.position.set(w / 4, y + (w / 4) * Math.tan(a) / 2, 0);
+  l.castShadow = r.castShadow = true;
+  g.add(l); g.add(r);
+  return g;
+}
+function textSprite(txt, y) {
+  const c = document.createElement("canvas"); c.width = 512; c.height = 96;
+  const x = c.getContext("2d");
+  x.font = "700 42px -apple-system, 'Segoe UI', Roboto, sans-serif";
+  x.textAlign = "center"; x.textBaseline = "middle";
+  x.lineWidth = 9; x.strokeStyle = "rgba(8,12,18,.85)"; x.strokeText(txt, 256, 50);
+  x.fillStyle = "#ffffff"; x.fillText(txt, 256, 50);
+  const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  mat.userData.own = true;
+  const s = new THREE.Sprite(mat);
+  s.scale.set(30, 5.6, 1); s.position.y = y; s.layers.set(1);
+  return s;
+}
+
+const BUILDERS = {
+  corral(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    g.add(flat(w, d, MAT.pad, 0.05));
+    g.add(fenceRect(w, d));
+    g.add(box(Math.max(2, w - 2), 0.5, 0.8, MAT.bunk, 0, 0.25, -d / 2 + 0.6));
+    g.add(flat(Math.max(2, w - 1.5), 3.2, MAT.concrete, 0.09, 0, -d / 2 + 2.1));
+    g.add(box(3, 0.55, 0.9, MAT.water, 0, 0.28, d / 2 - 1));
+    const r = Math.min(w, d) * 0.26;
+    if (r > 3) g.add(cyl(r * 0.35, r, 0.85, MAT.dirtLight, 0, 0.42, d * 0.08, 10));
+    return g;
+  },
+  calleja(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    g.add(flat(w, d, MAT.dirtLight, 0.06));
+    g.add(fenceRun(-w / 2, -d / 2, -w / 2, d / 2));
+    g.add(fenceRun(w / 2, -d / 2, w / 2, d / 2));
+    return g;
+  },
+  embarque(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    g.add(flat(w, d, MAT.dirtLight, 0.055));
+    const tub = fenceRect(Math.min(9, w - 2), 8); tub.position.z = d / 2 - 4.5; g.add(tub);
+    const cl = d - 21;
+    if (cl > 2) {
+      g.add(box(0.14, 1.5, cl, MAT.steel, -0.65, 0.75, d / 2 - 8.5 - cl / 2));
+      g.add(box(0.14, 1.5, cl, MAT.steel, 0.65, 0.75, d / 2 - 8.5 - cl / 2));
+    }
+    const ang = Math.atan(1.25 / 8);
+    const ramp = box(2.3, 0.14, 8.4, MAT.concrete, 0, 0.68, -d / 2 + 4.4); ramp.rotation.x = ang; ramp.castShadow = true;
+    const wl = box(0.12, 1.15, 8.4, MAT.steel, -1.2, 1.2, -d / 2 + 4.4); wl.rotation.x = ang;
+    const wr = box(0.12, 1.15, 8.4, MAT.steel, 1.2, 1.2, -d / 2 + 4.4); wr.rotation.x = ang;
+    g.add(ramp); g.add(wl); g.add(wr);
+    g.add(cyl(0.09, 0.09, 2.6, MAT.wood, -1.3, 1.3, -d / 2 + 0.4, 7));
+    g.add(cyl(0.09, 0.09, 2.6, MAT.wood, 1.3, 1.3, -d / 2 + 0.4, 7));
+    g.add(box(2.8, 0.12, 0.12, MAT.wood, 0, 2.55, -d / 2 + 0.4));
+    return g;
+  },
+  bascula(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    const p = box(w - 0.6, 0.4, d - 1.6, MAT.concrete, 0, 0.2, 0); p.castShadow = true; g.add(p);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1])
+      g.add(box(0.16, 1.05, 0.16, MAT.amber, sx * (w / 2 - 0.4), 0.52, sz * (d / 2 - 1)));
+    g.add(box(0.07, 0.07, d - 1.8, MAT.amber, -(w / 2 - 0.4), 1.02, 0));
+    g.add(box(0.07, 0.07, d - 1.8, MAT.amber, w / 2 - 0.4, 1.02, 0));
+    g.add(cyl(0.1, 0.1, 2.3, MAT.steelDark, w / 2 + 1, 1.15, -d / 2 + 2, 8));
+    g.add(box(1.3, 0.85, 0.18, MAT.steel, w / 2 + 1, 2.5, -d / 2 + 2));
+    return g;
+  },
+  planta(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    g.add(flat(w, d, MAT.concrete, 0.06));
+    const sw = w * 0.55, sd = d * 0.85, sx = -w * 0.17;
+    const shed = box(sw, 5.6, sd, MAT.wall, sx, 2.8, 0); shed.castShadow = true; g.add(shed);
+    const roof = gableRoof(sw, sd, 5.65, MAT.roof); roof.position.x = sx; g.add(roof);
+    const ns = Math.max(2, Math.min(4, Math.floor(d / 12)));
+    for (let i = 0; i < ns; i++) {
+      const z = (i - (ns - 1) / 2) * 5;
+      const s = cyl(1.75, 1.75, 8.5, MAT.steel, w * 0.3, 4.25, z, 14); s.castShadow = true; g.add(s);
+      g.add(cyl(0.15, 1.78, 1.7, MAT.roof, w * 0.3, 9.3, z, 14));
+    }
+    return g;
+  },
+  enfermeria(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    g.add(flat(w, d, MAT.pad, 0.05));
+    g.add(fenceRect(w, d));
+    const shed = box(w * 0.38, 2.7, d * 0.3, MAT.wall, w * 0.24, 1.35, -d * 0.28); shed.castShadow = true; g.add(shed);
+    const r = box(w * 0.44, 0.1, d * 0.36, MAT.roof, w * 0.24, 2.95, -d * 0.28); r.rotation.z = 0.1; r.castShadow = true; g.add(r);
+    g.add(box(2.4, 0.5, 0.8, MAT.water, -w * 0.25, 0.25, d * 0.3));
+    return g;
+  },
+  oficina(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    const b = box(w, 3, d, MAT.wall, 0, 1.5, 0); b.castShadow = true; g.add(b);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(d * 0.74, 1.9, 4), MAT.roof);
+    roof.rotation.y = Math.PI / 4; roof.scale.x = w / d; roof.position.y = 3.9; roof.castShadow = true; g.add(roof);
+    g.add(box(1.1, 2.15, 0.14, MAT.trunk, 0, 1.08, d / 2 + 0.03));
+    return g;
+  },
+  tanque(it) {
+    const g = new THREE.Group(), r = it.w / 2;
+    const b = cyl(r, r, 1.5, MAT.steel, 0, 0.75, 0, 24); b.castShadow = true; g.add(b);
+    const wtr = flat(1, 1, MAT.waterDark, 0, 0, 0);
+    wtr.geometry.dispose(); wtr.geometry = new THREE.CircleGeometry(r * 0.9, 24);
+    wtr.position.y = 1.52; g.add(wtr);
+    return g;
+  },
+  techo(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    const slope = Math.atan(0.9 / Math.max(w, 4));
+    const roof = box(w + 0.5, 0.1, d + 0.5, MAT.roof, 0, 4, 0);
+    roof.rotation.z = slope; roof.castShadow = true; g.add(roof);
+    const nz = Math.max(2, Math.round(d / 6) + 1);
+    for (const sx of [-1, 1]) {
+      const h = 4 + sx * (w / 2) * Math.tan(slope) - 0.08;
+      const im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.1, 0.11, h, 7), MAT.steelDark, nz);
+      const m4 = new THREE.Matrix4();
+      for (let i = 0; i < nz; i++) { m4.setPosition(sx * (w / 2 - 0.3), h / 2, -d / 2 + i * (d / (nz - 1))); im.setMatrixAt(i, m4); }
+      g.add(im);
+    }
+    return g;
+  },
+  expansion(it) {
+    const g = new THREE.Group(), w = it.w, d = it.d;
+    const fm = new THREE.MeshBasicMaterial({ color: 0xe8a33d, transparent: true, opacity: 0.1, depthWrite: false });
+    fm.userData.own = true;
+    g.add(flat(w, d, fm, 0.04));
+    const lg = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-w / 2, 0.35, -d / 2), new THREE.Vector3(w / 2, 0.35, -d / 2),
+      new THREE.Vector3(w / 2, 0.35, d / 2), new THREE.Vector3(-w / 2, 0.35, d / 2),
+      new THREE.Vector3(-w / 2, 0.35, -d / 2)
+    ]);
+    const lm = new THREE.LineDashedMaterial({ color: 0xe8a33d, dashSize: 3.2, gapSize: 2.2 });
+    lm.userData.own = true;
+    const line = new THREE.Line(lg, lm); line.computeLineDistances(); g.add(line);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1])
+      g.add(box(0.16, 1.3, 0.16, MAT.amber, sx * w / 2, 0.65, sz * d / 2));
+    return g;
+  },
+  laguna(it) {
+    const g = new THREE.Group();
+    const berm = new THREE.Mesh(new THREE.CircleGeometry(1, 30), MAT.dirtLight);
+    berm.rotation.x = -Math.PI / 2; berm.scale.set(it.w / 2 + 2.6, it.d / 2 + 2.6, 1); berm.position.y = 0.045;
+    const wtr = new THREE.Mesh(new THREE.CircleGeometry(1, 30), MAT.waterDark);
+    wtr.rotation.x = -Math.PI / 2; wtr.scale.set(it.w / 2, it.d / 2, 1); wtr.position.y = 0.075;
+    g.add(berm); g.add(wtr);
+    return g;
+  },
+  arbol(it) { const g = new THREE.Group(); addTree(g, 0, 0, it.w, seededRand(it.id * 7 + 3)); return g; },
+  arboleda(it) {
+    const g = new THREE.Group(), rnd = seededRand(it.id * 13 + 5);
+    const n = Math.max(2, Math.floor(it.d / 6) + 1), step = it.d / (n - 1);
+    for (let i = 0; i < n; i++) addTree(g, (rnd() - 0.5) * 1.6, -it.d / 2 + i * step, it.w, rnd);
+    return g;
+  },
+  silobolsa(it) {
+    const g = new THREE.Group();
+    const b = cyl(1.15, 1.15, it.d, MAT.bag, 0, 0.92, 0, 14);
+    b.rotation.x = Math.PI / 2; b.castShadow = true; g.add(b);
+    for (const s of [-1, 1]) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(1.13, 12, 9), MAT.bag);
+      e.position.set(0, 0.92, s * it.d / 2); g.add(e);
+    }
+    return g;
+  },
+  rollos(it) {
+    const g = new THREE.Group(), n = it.n, cols = Math.min(n, 8);
+    for (let i = 0; i < n; i++) {
+      const col = i % 8, row = Math.floor(i / 8);
+      const b = cyl(0.8, 0.8, 1.5, MAT.hay, (col - (cols - 1) / 2) * 1.8, 0.8, (row - (Math.ceil(n / 8) - 1) / 2) * 2, 12);
+      b.rotation.z = Math.PI / 2; b.castShadow = true; g.add(b);
+    }
+    return g;
+  }
+};
+function addTree(g, x, z, w, rnd) {
+  const s = 0.85 + rnd() * 0.35, r = (w / 2) * s;
+  const tr = cyl(0.15, 0.22, 2, MAT.trunk, x, 1, z, 7); tr.castShadow = true; g.add(tr);
+  const c1 = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 7), rnd() > 0.5 ? MAT.green1 : MAT.green2);
+  c1.position.set(x, 2 + r * 0.75, z); c1.scale.y = 0.82; c1.castShadow = true; g.add(c1);
+  const c2 = new THREE.Mesh(new THREE.SphereGeometry(r * 0.55, 7, 6), MAT.green2);
+  c2.position.set(x + r * 0.4, 2 + r * 1.05, z + r * 0.25); c2.castShadow = true; g.add(c2);
+}
+
+/* ================= Item management ================= */
+const groups = new Map();
+
+function disposeGroup(g) {
+  g.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material && o.material.userData && o.material.userData.own) {
+      if (o.material.map) o.material.map.dispose();
+      o.material.dispose();
+    }
+  });
+}
+
+function buildItem(it) {
+  const old = groups.get(it.id);
+  if (old) { itemsRoot.remove(old); disposeGroup(old); }
+  const g = BUILDERS[it.t](it);
+  g.position.set(it.x, 0, it.z);
+  g.rotation.y = -it.r * D2R;
+  g.userData.id = it.id;
+  const fp = footOf(it);
+  const og = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-fp.w / 2 - 0.6, 0.22, -fp.d / 2 - 0.6), new THREE.Vector3(fp.w / 2 + 0.6, 0.22, -fp.d / 2 - 0.6),
+    new THREE.Vector3(fp.w / 2 + 0.6, 0.22, fp.d / 2 + 0.6), new THREE.Vector3(-fp.w / 2 - 0.6, 0.22, fp.d / 2 + 0.6)
+  ]);
+  const ol = new THREE.LineLoop(og, new THREE.LineBasicMaterial({ color: 0xffd35c }));
+  ol.name = "selOl"; ol.layers.set(1); ol.visible = (it.id === selId);
+  g.add(ol);
+  if (TYPES[it.t].lab && state.labels) g.add(textSprite(it.name, TYPES[it.t].ly || 6));
+  groups.set(it.id, g);
+  itemsRoot.add(g);
+  return g;
+}
+
+function rebuildAll() {
+  for (const [, g] of groups) { itemsRoot.remove(g); disposeGroup(g); }
+  groups.clear();
+  state.items.forEach(buildItem);
+}
+
+function snapV(v) { return state.snap ? Math.round(v) : Math.round(v * 10) / 10; }
+
+function freeSpot(x, z) {
+  let n = 0;
+  while (n < 40 && state.items.some(o => Math.abs(o.x - x) < 4 && Math.abs(o.z - z) < 4)) { x += 12; if (n % 4 === 3) { x -= 48; z += 12; } n++; }
+  return { x: snapV(x), z: snapV(z) };
+}
+
+function addItem(type) {
+  const def = TYPES[type];
+  state.seq[type] = (state.seq[type] || 0) + 1;
+  const p = freeSpot(snapV(cam.t.x), snapV(cam.t.z));
+  const it = {
+    id: Date.now() % 2147483000 + Math.floor(Math.random() * 999),
+    t: type,
+    name: t(type) + " " + state.seq[type],
+    x: p.x, z: p.z, r: 0
+  };
+  if (def.w != null) it.w = def.w;
+  if (def.d != null) it.d = def.d;
+  if (def.n != null) it.n = def.n;
+  state.items.push(it);
+  buildItem(it);
+  select(it.id);
+  refreshAll();
+  save();
+  closeSheet("side");
+}
+
+function removeItem(id) {
+  const g = groups.get(id);
+  if (g) { itemsRoot.remove(g); disposeGroup(g); groups.delete(id); }
+  state.items = state.items.filter(i => i.id !== id);
+  if (selId === id) select(null);
+  refreshAll(); save();
+}
+
+function itemById(id) { return state.items.find(i => i.id === id); }
+
+function select(id) {
+  selId = id;
+  for (const [gid, g] of groups) {
+    const ol = g.getObjectByName("selOl");
+    if (ol) ol.visible = (gid === id);
+  }
+  const pr = $("props");
+  if (id == null) { pr.classList.remove("has", "open"); }
+  else { pr.classList.add("has", "open"); fillProps(); }
+  refreshList();
+}
+
+/* ================= Props panel ================= */
+let propsLock = false;
+function fillProps() {
+  const it = itemById(selId); if (!it) return;
+  propsLock = true;
+  const def = TYPES[it.t];
+  $("prEmoji").textContent = def.em;
+  $("prType").textContent = t(it.t);
+  $("prName").value = it.name;
+  const dl = def.dl || {};
+  $("fldW").style.display = dl.w ? "" : "none";
+  $("fldD").style.display = dl.d ? "" : "none";
+  $("fldN").style.display = def.n != null ? "" : "none";
+  if (dl.w) { $("lblW").textContent = t(dl.w); $("prW").value = it.w; }
+  if (dl.d) { $("lblD").textContent = t(dl.d); $("prD").value = it.d; }
+  if (def.n != null) $("prN").value = it.n;
+  $("prR").value = it.r; $("rotVal").textContent = it.r + "°";
+  updateCalc(it);
+  propsLock = false;
+}
+function updateCalc(it) {
+  const b = $("calcBox");
+  if (it.t === "corral" || it.t === "enfermeria") {
+    const area = it.w * it.d, cap = Math.max(1, Math.floor(area / state.m2head));
+    const bunkCm = Math.round((it.w * 100) / cap);
+    b.style.display = "";
+    b.innerHTML = t("area") + ": <b>" + fmt(area) + " m²</b><br>" +
+      t("cap") + ": <b>~" + fmt(cap) + " " + t("hd") + "</b> (" + state.m2head + " m²/" + t("hd") + ")<br>" +
+      "<b>" + bunkCm + "</b> " + t("bunkPer");
+  } else if (it.t === "expansion" || it.t === "laguna" || it.t === "planta") {
+    b.style.display = "";
+    b.innerHTML = t("area") + ": <b>" + fmt(it.w * it.d) + " m²</b>";
+  } else if (it.t === "arboleda") {
+    b.style.display = "";
+    b.innerHTML = "<b>" + (Math.max(2, Math.floor(it.d / 6) + 1)) + "</b> " + t("trees");
+  } else b.style.display = "none";
+  const it2 = it;
+  $("prSub").textContent = fmt(Math.round(it2.x)) + ", " + fmt(Math.round(it2.z)) + " m";
+}
+function propChanged() {
+  if (propsLock) return;
+  const it = itemById(selId); if (!it) return;
+  const def = TYPES[it.t], dl = def.dl || {};
+  it.name = $("prName").value || it.name;
+  if (dl.w) it.w = clamp(parseFloat($("prW").value) || it.w, 1, 800);
+  if (dl.d) it.d = clamp(parseFloat($("prD").value) || it.d, 1, 800);
+  if (def.n != null) it.n = clamp(parseInt($("prN").value) || it.n, 1, 200);
+  it.r = parseInt($("prR").value) || 0;
+  $("rotVal").textContent = it.r + "°";
+  buildItem(it);
+  updateCalc(it);
+  refreshAll(); save();
+}
+["prW", "prD", "prN", "prR"].forEach(id => { $(id).addEventListener("input", propChanged); });
+$("prName").addEventListener("change", () => { propChanged(); refreshList(); });
+$("prR90").onclick = () => {
+  const it = itemById(selId); if (!it) return;
+  it.r = (it.r + 90) % 360; $("prR").value = it.r;
+  propChanged();
+};
+$("prDup").onclick = () => {
+  const it = itemById(selId); if (!it) return;
+  const fp = footOf(it);
+  state.seq[it.t] = (state.seq[it.t] || 0) + 1;
+  const cp = JSON.parse(JSON.stringify(it));
+  cp.id = Date.now() % 2147483000 + Math.floor(Math.random() * 999);
+  cp.name = t(it.t) + " " + state.seq[it.t];
+  const dx = (it.r % 180 === 0) ? fp.w + 4 : fp.d + 4;
+  cp.x = it.x + dx;
+  state.items.push(cp);
+  buildItem(cp); select(cp.id); refreshAll(); save();
+};
+$("prDel").onclick = () => removeItem(selId);
+
+/* ================= Interaction ================= */
+const raycaster = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const ndc = new THREE.Vector2(), gp = new THREE.Vector3();
+const ptrs = new Map();
+let mode = null, down = null, dragId = null;
+const dragOff = { x: 0, z: 0 };
+let pinch0 = null;
+
+function setNdc(x, y) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+}
+function groundAt(x, y, out) {
+  setNdc(x, y);
+  raycaster.setFromCamera(ndc, camera);
+  return raycaster.ray.intersectPlane(groundPlane, out);
+}
+function pickItem(x, y) {
+  setNdc(x, y);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObjects(itemsRoot.children, true);
+  if (!hits.length) return null;
+  let o = hits[0].object;
+  while (o.parent && o.parent !== itemsRoot) o = o.parent;
+  return o.userData.id != null ? o.userData.id : null;
+}
+
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) {
+    down = { x: e.clientX, y: e.clientY, moved: false };
+    const hit = pickItem(e.clientX, e.clientY);
+    if (hit != null && e.button !== 2) {
+      mode = "obj"; dragId = hit;
+      const it = itemById(hit);
+      if (groundAt(e.clientX, e.clientY, gp)) { dragOff.x = it.x - gp.x; dragOff.z = it.z - gp.z; }
+    } else {
+      mode = (e.button === 2) ? "pan" : "orbit";
+      dragId = null;
+    }
+  } else if (ptrs.size === 2) {
+    const a = [...ptrs.values()];
+    pinch0 = { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), mx: (a[0].x + a[1].x) / 2, my: (a[0].y + a[1].y) / 2, rho: cam.rho };
+    mode = "pinch";
+  }
+});
+canvas.addEventListener("pointermove", e => {
+  const p = ptrs.get(e.pointerId);
+  if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) down.moved = true;
+  if (mode === "pinch" && ptrs.size === 2) {
+    const a = [...ptrs.values()];
+    const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+    const mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2;
+    if (d > 10) cam.rho = clamp(pinch0.rho * (pinch0.d / d), 14, 2200);
+    panCam(mx - pinch0.mx, my - pinch0.my);
+    pinch0.mx = mx; pinch0.my = my; pinch0.d = d; pinch0.rho = cam.rho;
+  } else if (mode === "orbit") {
+    cam.th -= dx * 0.005;
+    cam.ph = clamp(cam.ph - dy * 0.005, 0.06, 1.45);
+    camGoal.ph = null;
+  } else if (mode === "pan") {
+    panCam(dx, dy);
+  } else if (mode === "obj" && down && down.moved) {
+    if (!ptrs.size || ptrs.size > 1) return;
+    const it = itemById(dragId);
+    if (it && groundAt(e.clientX, e.clientY, gp)) {
+      it.x = snapV(gp.x + dragOff.x);
+      it.z = snapV(gp.z + dragOff.z);
+      const g = groups.get(dragId);
+      if (g) g.position.set(it.x, 0, it.z);
+      if (selId === dragId) $("prSub").textContent = fmt(Math.round(it.x)) + ", " + fmt(Math.round(it.z)) + " m";
+    }
+  }
+});
+function ptrEnd(e) {
+  const wasTap = down && !down.moved && ptrs.size === 1;
+  if (wasTap) {
+    if (mode === "obj" && dragId != null) select(dragId);
+    else if (mode === "orbit") select(null);
+  }
+  if (mode === "obj" && down && down.moved) save();
+  ptrs.delete(e.pointerId);
+  if (ptrs.size === 0) { mode = null; down = null; dragId = null; pinch0 = null; }
+  else if (ptrs.size === 1) { mode = "orbit"; down = null; }
+}
+canvas.addEventListener("pointerup", ptrEnd);
+canvas.addEventListener("pointercancel", ptrEnd);
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  cam.rho = clamp(cam.rho * Math.exp(e.deltaY * 0.0011), 14, 2200);
+}, { passive: false });
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+window.addEventListener("keydown", e => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea") return;
+  const step = cam.rho * 0.035;
+  const fx = -Math.sin(cam.th), fz = -Math.cos(cam.th);
+  const rx = Math.cos(cam.th), rz = -Math.sin(cam.th);
+  switch (e.key.toLowerCase()) {
+    case "w": case "arrowup": cam.t.x += fx * step; cam.t.z += fz * step; break;
+    case "s": case "arrowdown": cam.t.x -= fx * step; cam.t.z -= fz * step; break;
+    case "a": case "arrowleft": cam.t.x -= rx * step; cam.t.z -= rz * step; break;
+    case "d": case "arrowright": cam.t.x += rx * step; cam.t.z += rz * step; break;
+    case "q": cam.th += 0.07; break;
+    case "e": cam.th -= 0.07; break;
+    case "r": if (selId != null) { const it = itemById(selId); it.r = (it.r + 90) % 360; $("prR").value = it.r; propsLock = false; propChanged(); } break;
+    case "delete": case "backspace": if (selId != null) { e.preventDefault(); removeItem(selId); } break;
+    case "escape": select(null); break;
+  }
+});
+
+/* ================= Stats & lists ================= */
+function fmt(n) { return n.toLocaleString(state.lang === "es" ? "es-AR" : "en-US"); }
+
+function stats() {
+  let pens = 0, cap = 0, bunk = 0, penArea = 0, used = 0;
+  for (const it of state.items) {
+    const fp = footOf(it);
+    used += fp.w * fp.d;
+    if (it.t === "corral") {
+      pens++; penArea += it.w * it.d;
+      cap += Math.floor((it.w * it.d) / state.m2head);
+      bunk += it.w;
+    }
+  }
+  return { pens, cap, bunk, penArea, used };
+}
+
+function refreshChip() {
+  const s = stats();
+  $("chip").innerHTML = "🐂 <b>" + fmt(s.cap) + "</b> " + t("hd") + " · " +
+    s.pens + " " + t("stCorr") + " · " + (s.penArea / 10000).toFixed(1) + " ha";
+}
+
+function refreshList() {
+  const el = $("fieldList");
+  el.innerHTML = "";
+  $("fEmpty").style.display = state.items.length ? "none" : "";
+  for (const it of state.items) {
+    const b = document.createElement("button");
+    b.className = "fRow" + (it.id === selId ? " sel" : "");
+    const fp = footOf(it);
+    b.innerHTML = "<span>" + TYPES[it.t].em + "</span><span>" + esc(it.name) + "</span><small>" +
+      (TYPES[it.t].dl && TYPES[it.t].dl.w && TYPES[it.t].dl.d ? Math.round(fp.w) + "×" + Math.round(fp.d) : "") + "</small>";
+    b.onclick = () => { select(it.id); cam.t.x = it.x; cam.t.z = it.z; if (cam.rho > 400) cam.rho = 260; closeSheet("side"); };
+    el.appendChild(b);
+  }
+}
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function refreshAll() { refreshChip(); refreshList(); }
+
+/* ================= Menus / modals ================= */
+function openOv(id) { $(id).classList.add("show"); }
+document.querySelectorAll("[data-ov]").forEach(b => b.onclick = () => $(b.dataset.ov).classList.remove("show"));
+document.querySelectorAll(".ov").forEach(o => o.addEventListener("pointerdown", e => { if (e.target === o) o.classList.remove("show"); }));
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closeSheet(b.dataset.close));
+function closeSheet(id) { $(id).classList.remove("open"); }
+
+$("btnMenu").onclick = () => openOv("menuOv");
+$("mBack").onclick = () => { location.href = "index.html"; };
+$("mSum").onclick = () => { $("menuOv").classList.remove("show"); showSummary(); };
+$("mSet").onclick = () => {
+  $("menuOv").classList.remove("show");
+  $("stM2").value = state.m2head; $("stTw").value = state.terrain.w; $("stTd").value = state.terrain.d;
+  $("stLab").checked = state.labels; $("stShad").checked = state.shadows;
+  openOv("setOv");
+};
+$("btnTerr").onclick = () => { $("mSet").onclick(); };
+$("stApply").onclick = () => {
+  state.m2head = clamp(parseFloat($("stM2").value) || 20, 5, 100);
+  state.terrain.w = clamp(parseInt($("stTw").value) || 500, 100, 3000);
+  state.terrain.d = clamp(parseInt($("stTd").value) || 500, 100, 3000);
+  state.labels = $("stLab").checked;
+  state.shadows = $("stShad").checked;
+  renderer.shadowMap.enabled = state.shadows;
+  scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+  buildTerrain(); rebuildAll(); refreshAll(); save();
+  if (selId != null) fillProps();
+  $("setOv").classList.remove("show");
+};
+$("mClear").onclick = () => {
+  if (!confirm(t("clearQ"))) return;
+  state.items = []; state.seq = {};
+  rebuildAll(); select(null); refreshAll(); save();
+  $("menuOv").classList.remove("show");
+};
+
+function showSummary() {
+  const s = stats();
+  const terrArea = state.terrain.w * state.terrain.d;
+  $("sumBig").innerHTML =
+    "<div class='bs'><div class='bv'>" + fmt(s.cap) + "</div><div class='bl'>" + t("stCap") + "</div></div>" +
+    "<div class='bs'><div class='bv'>" + s.pens + "</div><div class='bl'>" + t("stCorr") + "</div></div>" +
+    "<div class='bs'><div class='bv'>" + fmt(Math.round(s.bunk)) + "</div><div class='bl'>" + t("stBunk") + "</div></div>" +
+    "<div class='bs'><div class='bv'>" + (100 * s.used / terrArea).toFixed(1) + "%</div><div class='bl'>" + t("stUse") + "</div></div>";
+  const by = {};
+  for (const it of state.items) {
+    const fp = footOf(it);
+    (by[it.t] = by[it.t] || { n: 0, a: 0 }); by[it.t].n++; by[it.t].a += fp.w * fp.d;
+  }
+  let rows = "";
+  for (const k of ORDER) if (by[k]) rows += "<tr><td>" + TYPES[k].em + " " + t(k) + "</td><td>" + by[k].n + "</td><td>" + fmt(Math.round(by[k].a)) + "</td></tr>";
+  $("sumBody").innerHTML = rows || "<tr><td colspan='3'>—</td></tr>";
+  openOv("sumOv");
+}
+
+/* Export / import / PNG */
+function dl(name, url) {
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+$("mJson").onclick = () => {
+  const blob = new Blob([JSON.stringify({ app: "feedlot", v: 1, state }, null, 1)], { type: "application/json" });
+  const u = URL.createObjectURL(blob);
+  dl("feedlot-" + new Date().toISOString().slice(0, 10) + ".json", u);
+  setTimeout(() => URL.revokeObjectURL(u), 4000);
+  $("menuOv").classList.remove("show");
+};
+$("mImp").onclick = () => { $("impFile").click(); };
+$("impFile").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const j = JSON.parse(rd.result);
+      const st = j.state || j;
+      if (!Array.isArray(st.items)) throw 0;
+      state.items = st.items;
+      state.seq = st.seq || {};
+      if (st.terrain) state.terrain = st.terrain;
+      if (st.m2head) state.m2head = st.m2head;
+      buildTerrain(); rebuildAll(); select(null); refreshAll(); save();
+      $("menuOv").classList.remove("show");
+    } catch (err) { alert(t("impErr")); }
+  };
+  rd.readAsText(f);
+  e.target.value = "";
+});
+$("mPng").onclick = () => {
+  render();
+  dl("feedlot.png", canvas.toDataURL("image/png"));
+  $("menuOv").classList.remove("show");
+};
+
+/* ================= Header / palette wiring ================= */
+let topView = false;
+$("btnView").onclick = () => {
+  topView = !topView;
+  camGoal.ph = topView ? 0.07 : 0.92;
+  $("btnView").textContent = topView ? "3D" : "2D";
+  $("btnView").classList.toggle("on", topView);
+};
+$("nOrbit").onclick = () => { topView = false; camGoal.ph = 0.92; $("btnView").textContent = "2D"; $("btnView").classList.remove("on"); };
+$("nTop").onclick = () => { topView = true; camGoal.ph = 0.07; $("btnView").textContent = "3D"; $("btnView").classList.add("on"); };
+$("nCenter").onclick = () => { cam.t.set(0, 0, 0); cam.rho = Math.max(state.terrain.w, state.terrain.d) * 1.15; };
+
+$("gridBtns").querySelectorAll("button").forEach(b => {
+  b.onclick = () => {
+    state.grid = parseInt(b.dataset.g);
+    $("gridBtns").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    buildGrid(); save();
+  };
+});
+$("ckSnap").addEventListener("change", () => { state.snap = $("ckSnap").checked; save(); });
+
+$("btnLang").onclick = () => { state.lang = state.lang === "es" ? "en" : "es"; applyLang(); save(); };
+function applyLang() {
+  $("btnLang").textContent = state.lang.toUpperCase();
+  document.documentElement.lang = state.lang;
+  document.querySelectorAll("[data-i]").forEach(el => { el.textContent = t(el.dataset.i); });
+  buildPalette();
+  $("hint").textContent = ("ontouchstart" in window) ? t("hintTouch") : t("hint");
+  if (selId != null) fillProps();
+  refreshAll();
+}
+
+function buildPalette() {
+  ["padd", "pnat", "pforr"].forEach(id => { $(id).innerHTML = ""; });
+  for (const k of ORDER) {
+    const def = TYPES[k];
+    const b = document.createElement("button");
+    b.className = "pBtn";
+    b.innerHTML = "<span class='em'>" + def.em + "</span>" + t(k);
+    b.onclick = () => addItem(k);
+    $(def.cat).appendChild(b);
+  }
+}
+
+$("fabAdd").onclick = () => { $("side").classList.add("open"); };
+
+/* ================= Render loop ================= */
+function resize() {
+  const r = $("stage").getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height);
+  camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", () => setTimeout(resize, 60));
+
+function render() { applyCam(); renderer.render(scene, camera); }
+function loop() {
+  if (camGoal.ph != null) {
+    cam.ph += (camGoal.ph - cam.ph) * 0.16;
+    if (Math.abs(camGoal.ph - cam.ph) < 0.004) { cam.ph = camGoal.ph; camGoal.ph = null; }
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ================= Init ================= */
+const saved = store.get(LS, null);
+if (saved && Array.isArray(saved.items)) {
+  state = Object.assign(state, saved);
+  state.terrain = saved.terrain || state.terrain;
+}
+$("ckSnap").checked = !!state.snap;
+$("gridBtns").querySelectorAll("button").forEach(x => x.classList.toggle("on", parseInt(x.dataset.g) === state.grid));
+renderer.shadowMap.enabled = !!state.shadows;
+
+buildTerrain();
+rebuildAll();
+applyLang();
+cam.rho = Math.max(state.terrain.w, state.terrain.d) * 1.05;
+resize();
+loop();
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+})();
+</script>
+</body>
+</html>
